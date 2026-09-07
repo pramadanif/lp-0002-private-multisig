@@ -1,0 +1,30 @@
+[package]
+name = "pmsig-basecamp-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# The Basecamp module loads this as a shared library and calls it over the C ABI declared in
+# app/src/PrivateMultisigBackend.cpp. `cdylib` is what produces that library; `rlib` keeps the
+# crate testable from the workspace.
+[lib]
+# The generated CMake looks for lib/libpmsig_ffi.<ext> — the path build-basecamp.sh passes as
+# --ffi-lib-path. The library name has to match that, not the package name.
+name = "pmsig_ffi"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# spel-client-gen emits `use nssa::…`, the name LEZ's state-machine crate had before v0.2.4 —
+# "nssa" appears nowhere in the pinned LEZ tree. The crate is `lee`, and it re-exports exactly what
+# the generated code imports flat: AccountId, ProgramId, PublicTransaction, plus the
+# public_transaction and program modules. Renaming here keeps the generated files byte-identical to
+# what the generator produces, so they can be regenerated rather than maintained.
+nssa = { package = "lee", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
+wallet = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
+sequencer_service_rpc = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
+borsh = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { version = "1", features = ["rt-multi-thread"] }

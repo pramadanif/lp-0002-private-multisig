@@ -22,6 +22,9 @@ cd "$(dirname "$0")/.." || { echo "cannot cd to repo root" >&2; exit 1; }
 
 QML=app/qml/Main.qml
 BACKEND=app/src/PrivateMultisigBackend.cpp
+# The generated C ABI is what actually receives the witness — the member's nullifier secret key —
+# and turns it into a transaction. It was outside this gate entirely while it did not exist.
+FFI=crates/basecamp-ffi/src/generated/private_multisig_ffi.rs
 
 # Phase F has run and app/ is committed, so its absence is now a broken checkout or a deleted
 # directory — not a phase that has not happened yet. This used to `exit 0` here, which is the
@@ -66,7 +69,33 @@ else
   echo "  OK    no member-identity field in the UI (SC-F.6)"
 fi
 
-# 4. The witness field should at least be marked as sensitive to the user.
+# 4. The FFI holds the witness in memory. It must not print, log or otherwise emit it. Today the
+#    generated code prints nothing at all, so this asserts that property rather than hoping a future
+#    regeneration keeps it: any print/log macro in the file fails, whatever its argument, because a
+#    macro that is there can be given the witness in the next revision.
+if [[ -f "$FFI" ]]; then
+  emitters=$(grep -nE '\b(println!|eprintln!|dbg!|print!|eprint!|log::(trace|debug|info|warn|error)!|tracing::(trace|debug|info|warn|error)!)' "$FFI" || true)
+  if [[ -n "$emitters" ]]; then
+    echo "  FAIL  the FFI emits output; it handles the witness, so nothing there may print:" >&2
+    printf '%s\n' "$emitters" | sed 's/^/        /' >&2
+    fail=1
+  else
+    echo "  OK    the FFI prints nothing (it receives the witness)"
+  fi
+
+  # And it must not put the witness on disk.
+  if grep -nE 'File::create|write\(|fs::write|OpenOptions' "$FFI" | grep -qi 'witness'; then
+    echo "  FAIL  the FFI writes the witness to a file" >&2
+    fail=1
+  else
+    echo "  OK    the FFI never writes the witness to disk"
+  fi
+else
+  echo "  FAIL  $FFI is missing — it is committed, so this is a broken checkout" >&2
+  fail=1
+fi
+
+# 5. The witness field should at least be marked as sensitive to the user.
 if grep -q 'approve_witnessf' "$QML" && ! grep -qiE 'secret|sensitive|never shared|do not share' "$QML"; then
   echo "  WARN  the witness field is not labelled as secret in the UI"
 fi

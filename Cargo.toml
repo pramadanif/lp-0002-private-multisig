@@ -8,6 +8,7 @@ members = [
     "crates/membership-core",
     "crates/guest-tools",
     "crates/multisig-core",
+    "crates/basecamp-ffi",
 ]
 # Guests cross-compile to riscv32im-risc0-zkvm-elf and are built separately, not as workspace members.
 exclude = ["programs/membership-lez", "programs/multisig-spel"]

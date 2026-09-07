@@ -55,6 +55,48 @@ fi
 log "checking the UI does not leak member secrets"
 ./scripts/check-basecamp-privacy.sh || die "the Basecamp UI failed its privacy checks"
 
+# ─── 2b. The C ABI the module calls ─────────────────────────────────────────────────────────────
+#
+# app/src/PrivateMultisigBackend.cpp declares thirteen `extern "C"` functions and CMake is told to
+# link lib/libpmsig_ffi.<ext>. Nothing built that library, so the module could be packaged and would
+# then fail to load on unresolved symbols. spel-client-gen emits the whole C ABI from the same IDL
+# (--target rust+ffi); crates/basecamp-ffi carries it, and this builds it.
+log "building the C ABI library the module links against"
+case "$(uname)" in
+  Darwin) LIBEXT=dylib ;;
+  Linux)  LIBEXT=so ;;
+  *)      die "unsupported platform $(uname) — the module ships darwin and linux variants" ;;
+esac
+cargo build --release -p pmsig-basecamp-ffi || die "the FFI library failed to build"
+BUILT="target/release/libpmsig_ffi.$LIBEXT"
+[[ -s "$BUILT" ]] || die "cargo reported success but $BUILT is missing"
+mkdir -p app/lib
+cp "$BUILT" "app/lib/libpmsig_ffi.$LIBEXT"
+info "app/lib/libpmsig_ffi.$LIBEXT ($(wc -c < "$BUILT" | tr -d ' ') bytes)"
+
+# Every symbol the C++ declares must actually be in it. A missing one is a load-time failure in
+# Basecamp, which is the one place it is expensive to discover.
+# `nm -gU` is macOS spelling and silently lists nothing on Linux, which would turn this check into
+# a check that always passes. Each platform gets its own, and an unusable nm is a failure.
+case "$LIBEXT" in
+  dylib) exported=$(nm -gU "$BUILT" 2>/dev/null) ;;
+  so)    exported=$(nm -D --defined-only "$BUILT" 2>/dev/null) ;;
+esac
+[[ -n "$exported" ]] || die "could not read exported symbols from $BUILT; refusing to package blind"
+
+wanted=$(grep -oE 'private_multisig_[a-z_]+' app/src/PrivateMultisigBackend.cpp | sort -u)
+missing_syms=()
+for sym in $wanted; do
+  # macOS prefixes an underscore, Linux does not; accept either spelling.
+  printf '%s\n' "$exported" | grep -qE "(^| )_?${sym}$" || missing_syms+=("$sym")
+done
+if (( ${#missing_syms[@]:-0} > 0 )); then
+  die "the FFI library does not export ${#missing_syms[@]} symbol(s) the UI calls: ${missing_syms[*]}
+       The module would package cleanly and then fail to load. Regenerate with
+       ./scripts/generate-basecamp-ffi.sh"
+fi
+info "$(printf '%s\n' "$wanted" | wc -l | tr -d ' ') symbols the UI calls are all exported"
+
 log "checking the manifest is complete"
 python3 - <<'PY' || exit 1
 import json, sys
@@ -98,6 +140,9 @@ command -v lgx >/dev/null 2>&1 || die "the 'lgx' tool is not installed.
 rm -rf app/.lgx-staging && mkdir -p app/.lgx-staging
 cp app/build/lib*_plugin.* app/.lgx-staging/ 2>/dev/null || die "no built plugin to package"
 cp app/qml/Main.qml app/.lgx-staging/
+# Without this the package loads and then fails on the first call into the program.
+cp "app/lib/libpmsig_ffi.$LIBEXT" app/.lgx-staging/ \
+  || die "the FFI library is not in app/lib — stage 2b did not run"
 ( cd app && lgx create private_multisig ) || die "lgx create failed"
 lgx add app/private_multisig.lgx -f app/.lgx-staging -y || die "lgx add failed"
 python3 scripts/patch_lgx_manifest.py app/private_multisig.lgx app/manifest.json 2>/dev/null || true

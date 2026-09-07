@@ -41,6 +41,24 @@ if (( ${#urls[@]:-0} == 0 )); then
   exit 1
 fi
 
+# The explorer's index trails the sequencer. A transaction written minutes ago serves the same
+# 2,416-byte loading shell as a hash that cannot exist — measured on this run's own transactions,
+# while a transaction from block 4459 returns 400 KB. So "the explorer does not show it" cannot,
+# on its own, distinguish "not yet indexed" from "not there".
+#
+# The chain is the authority; the explorer is a convenience index over it. When a transaction page
+# looks empty, ask the sequencer directly: if the RPC has the transaction, the evidence is real and
+# the index is merely behind — reported, not failed. If neither has it, that is still a failure.
+RPC_FOR_INDEX="${PMSIG_RPC:-https://testnet.lez.logos.co}"
+pending=0
+chain_has() {
+  local h="$1"
+  [[ ${#h} -eq 64 ]] || return 1
+  curl -s -X POST "$RPC_FOR_INDEX" -H 'content-type: application/json' \
+    --data "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$h\"]}" \
+    --max-time 20 2>/dev/null | grep -q '"result"[[:space:]]*:[[:space:]]*[^n]'
+}
+
 fail=0
 for url in "${urls[@]}"; do
   code=$(curl -s -o /tmp/explorer-body.$$ -w '%{http_code}' -L --max-time 25 "$url" || echo 000)
@@ -55,8 +73,14 @@ for url in "${urls[@]}"; do
   if [[ "$code" == "200" && $body_says_missing -eq 0 ]]; then
     printf '  OK   %s\n' "$url"
   elif [[ $body_says_missing -eq 1 ]]; then
-    printf '  DEAD %s  (HTTP %s but the page reports no such record — testnet wiped?)\n' "$url" "$code"
-    fail=1
+    hash=${url##*/}
+    if [[ "$url" == *"/transaction/"* ]] && chain_has "$hash"; then
+      printf '  WAIT %s\n       the sequencer has this transaction; the explorer has not indexed it yet\n' "$url"
+      pending=$((pending + 1))
+    else
+      printf '  DEAD %s  (HTTP %s, and the sequencer does not have it either)\n' "$url" "$code"
+      fail=1
+    fi
   else
     printf '  FAIL %s  (HTTP %s)\n' "$url" "$code"
     fail=1
@@ -69,4 +93,10 @@ if (( fail )); then
   echo "Re-deploy and update docs/DEPLOYMENT.md before submitting (SC-G.12)." >&2
   exit 1
 fi
-echo "All ${#urls[@]} evidence URLs resolve."
+if (( pending )); then
+  echo "$((${#urls[@]} - pending)) of ${#urls[@]} evidence URLs resolve; $pending are on chain but not yet"
+  echo "indexed by the explorer. Re-run this before opening the PR — the links must render for a"
+  echo "reviewer, and a submission is not finished while any of them still says WAIT."
+else
+  echo "All ${#urls[@]} evidence URLs resolve."
+fi
