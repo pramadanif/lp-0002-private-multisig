@@ -124,7 +124,21 @@ log "checking the wallet can reach it and holds funds"
 # CI. Keeping stderr means the next failure says what it was instead of vanishing into /dev/null.
 wallet_accounts=$("$WALLET" account list 2>&1) \
   || die "the wallet could not list accounts: $wallet_accounts"
-CREATOR=$(printf '%s\n' "$wallet_accounts" | awk '/Public\//{print $2; exit}')
+# The payer is the public account that holds the funds, not whichever one `account list` prints
+# first. Once this script has created a payee, the wallet has two public accounts and the payee can
+# sort ahead of the payer — after which the balance check below reads 0 and blames an empty wallet.
+CREATOR="${PMSIG_CREATOR:-}"
+if [[ -z "$CREATOR" ]]; then
+  best_bal=-1
+  while read -r pub; do
+    [[ -n "$pub" ]] || continue
+    bal=$(curl -s -X POST "$RPC" -H 'content-type: application/json' \
+      --data "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"getAccountBalance\",\"params\":[\"${pub#Public/}\"]}" \
+      --max-time 20 | jq -r '.result // 0')
+    [[ "$bal" =~ ^[0-9]+$ ]] || bal=0
+    if (( bal > best_bal )); then best_bal=$bal; CREATOR=$pub; fi
+  done < <(printf '%s\n' "$wallet_accounts" | awk '/Public\//{print $2}')
+fi
 [[ -n "$CREATOR" ]] || die "the wallet has no public account. Fund one on the testnet first."
 # `account list` prints the id with a `Public/` prefix; the RPC wants the bare base58 and rejects
 # the prefixed form with `InvalidBase58Character('l', 3)` — the l of "Public". fund-testnet.sh has
@@ -194,14 +208,34 @@ owner = r.get("program_owner") or []
 used = any(x for x in owner) or r.get("balance") or r.get("nonce") or (r.get("data") or [])
 print("taken" if used else "free")
 ')
+# Resuming is the one case where an occupied config PDA is what we want. It still has to be *our*
+# multisig: an account at that address owned by something else is not a run to continue.
+if [[ "${PMSIG_RESUME:-0}" == "1" ]]; then
+  [[ "$occupied" == "taken" ]] \
+    || die "PMSIG_RESUME=1 but nothing exists at $CONFIG_PDA — there is no run to resume.
+       Run without PMSIG_RESUME to deploy from the start."
+  owner_ok=$(curl -s -X POST "$RPC" -H 'content-type: application/json' \
+    --data "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"getAccount\",\"params\":[\"$CONFIG_PDA\"]}" \
+    --max-time 20 | jq -c '.result.program_owner // empty')
+  want_owner=$(awk -F'`' '/^\| ProgramId/{print $2; exit}' <(grep -A 8 '^## .multisig' artifacts/IMAGE_IDS.md) | tr -d ' ')
+  [[ "$owner_ok" == "$want_owner" ]] \
+    || die "the account at $CONFIG_PDA is not owned by this multisig program.
+       on chain: $owner_ok
+       expected: $want_owner
+       Refusing to resume into somebody else's account."
+  info "resuming the run at $CONFIG_PDA (owned by this multisig program)"
+fi
+
 case "$occupied" in
-  taken) die "the multisig this run would create already exists at $CONFIG_PDA.
+  taken) [[ "${PMSIG_RESUME:-0}" == "1" ]] || die "the multisig this run would create already exists at $CONFIG_PDA.
        Every address here is derived from the wallet accounts and the guest ImageIDs, so a repeat
        run targets the same ones. Give the retry a fresh namespace:
          PMSIG_MULTISIG_ID=\$(openssl rand -hex 32) PMSIG_PROPOSAL_ID=\$(openssl rand -hex 32) \\
            LEE_WALLET_HOME_DIR=$LEE_WALLET_HOME_DIR ./scripts/deploy-testnet.sh
-       Record whichever ids you use — docs/DEPLOYMENT.md needs them to be verifiable." ;;
-  free)  info "config PDA $CONFIG_PDA is free" ;;
+       Record whichever ids you use — docs/DEPLOYMENT.md needs them to be verifiable.
+       To continue the run that created it instead, set PMSIG_RESUME=1." ;;
+  free)  [[ "${PMSIG_RESUME:-0}" != "1" ]] || die "PMSIG_RESUME=1 but $CONFIG_PDA is empty"
+         info "config PDA $CONFIG_PDA is free" ;;
   *)     die "could not tell whether $CONFIG_PDA is already in use; refusing to start blind" ;;
 esac
 
@@ -213,11 +247,18 @@ run_ix() { # name, then args
   awk '/tx_hash/{print $2; exit}' "$OUT/$name.log"
 }
 
-log "create_multisig (2-of-3)"
-TX_CREATE=$(run_ix create -- create-multisig \
-  --config-hash "$CONFIG_HASH" --member-root "$MEMBER_ROOT" --m 2 --n 3 \
-  --multisig-id "$MULTISIG_ID" --membership-program-id "$VERIFIER" --creator "$CREATOR")
-info "tx $TX_CREATE"
+if [[ "${PMSIG_RESUME:-0}" == "1" ]]; then
+  # Already on chain; its transaction hash comes from the run that made it, so DEPLOYMENT.md can
+  # still cite it. Without one the evidence table would carry a blank where a link belongs.
+  TX_CREATE="${PMSIG_TX_CREATE:?PMSIG_RESUME=1 needs PMSIG_TX_CREATE — the create_multisig tx hash from the original run, for the evidence table}"
+  info "create_multisig: already on chain, tx $TX_CREATE"
+else
+  log "create_multisig (2-of-3)"
+  TX_CREATE=$(run_ix create -- create-multisig \
+    --config-hash "$CONFIG_HASH" --member-root "$MEMBER_ROOT" --m 2 --n 3 \
+    --multisig-id "$MULTISIG_ID" --membership-program-id "$VERIFIER" --creator "$CREATOR")
+  info "tx $TX_CREATE"
+fi
 
 # The demo moves a modest amount: a faucet claim is 150, and the proposal must be payable out of
 # the multisig's own treasury (INV-7). Both are defined here, before the funding step uses them.
@@ -238,10 +279,22 @@ TREASURY_AMOUNT=100
 # time the threshold is reached.
 log "funding the multisig's treasury ($CONFIG_PDA)"
 [[ -n "${CONFIG_PDA:-}" ]] || die "CONFIG_PDA was not derived — is examples/wallet_member.rs emitting it?"
-fund_out=$("$WALLET" auth-transfer send \
-  --from "$CREATOR" --to "Public/$CONFIG_PDA" --amount "$TREASURY_AMOUNT" 2>&1) \
-  || { printf '%s\n' "$fund_out" >&2; die "could not fund the multisig treasury"; }
-info "funded with $TREASURY_AMOUNT — $(printf '%s\n' "$fund_out" | awk '/included in block/{print; exit}')"
+if [[ "${PMSIG_RESUME:-0}" == "1" ]]; then
+  # Funding twice would leave the treasury holding more than the proposal was written against, and
+  # the exact-remainder check at the end would then fail on a deployment that was otherwise fine.
+  held=$(curl -s -X POST "$RPC" -H 'content-type: application/json' \
+    --data "{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"getAccountBalance\",\"params\":[\"$CONFIG_PDA\"]}" \
+    --max-time 20 | jq -r '.result // empty')
+  [[ "$held" == "$TREASURY_AMOUNT" ]] \
+    || die "resuming, but the treasury holds '$held' and the proposal was written against $TREASURY_AMOUNT.
+       Funding it again would break the arithmetic the final check verifies."
+  info "treasury already holds $held — not funding again"
+else
+  fund_out=$("$WALLET" auth-transfer send \
+    --from "$CREATOR" --to "Public/$CONFIG_PDA" --amount "$TREASURY_AMOUNT" 2>&1) \
+    || { printf '%s\n' "$fund_out" >&2; die "could not fund the multisig treasury"; }
+  info "funded with $TREASURY_AMOUNT — $(printf '%s\n' "$fund_out" | awk '/included in block/{print; exit}')"
+fi
 
 log "create_proposal (treasury transfer)"
 # One variable for both steps: `execute` refuses a recipient the proposal did not name (INV-7).
@@ -250,13 +303,24 @@ log "create_proposal (treasury transfer)"
 # account cannot be credited, an account with a default owner and non-default state is refused by
 # validate_execution rule 7, and the payee cannot be the submitter because account ids in a message
 # must be unique.
-log "creating the payee account"
-"$WALLET" account new public > "$OUT/payee.log" 2>&1 || die "could not create the payee account"
-PAYEE=$("$WALLET" account list 2>/dev/null | awk '/Public\//{print $2}' | grep -v "^${CREATOR}$" | head -1)
-[[ -n "$PAYEE" ]] || die "no second public account after creating one — see $OUT/payee.log"
-"$WALLET" auth-transfer init --account-id "$PAYEE" > "$OUT/payee-init.log" 2>&1 || true
-grep -q 'included in block' "$OUT/payee-init.log" \
-  || { tail -5 "$OUT/payee-init.log" >&2; die "could not initialise the payee account"; }
+if [[ "${PMSIG_RESUME:-0}" == "1" ]]; then
+  # Reuse the payee the proposal already names. Creating a fresh one would make `execute` refuse it
+  # under INV-7 — the transfer that executes is the transfer that was approved — after two more
+  # twenty-minute proofs.
+  log "reusing the payee from the run being resumed"
+  PAYEE=$("$WALLET" account list 2>/dev/null | awk '/Public\//{print $2}' | grep -v "^${CREATOR}$" | head -1)
+  [[ -n "$PAYEE" ]] || die "resuming, but the wallet has no public account other than the payer.
+       The payee this proposal names is gone; there is nothing to resume into."
+  info "payee $PAYEE"
+else
+  log "creating the payee account"
+  "$WALLET" account new public > "$OUT/payee.log" 2>&1 || die "could not create the payee account"
+  PAYEE=$("$WALLET" account list 2>/dev/null | awk '/Public\//{print $2}' | grep -v "^${CREATOR}$" | head -1)
+  [[ -n "$PAYEE" ]] || die "no second public account after creating one — see $OUT/payee.log"
+  "$WALLET" auth-transfer init --account-id "$PAYEE" > "$OUT/payee-init.log" 2>&1 || true
+  grep -q 'included in block' "$OUT/payee-init.log" \
+    || { tail -5 "$OUT/payee-init.log" >&2; die "could not initialise the payee account"; }
+fi
 
 RECIPIENT=$(python3 -c "
 import sys
@@ -269,11 +333,16 @@ print(f'{n:064x}')
 " "$PAYEE")
 [[ ${#RECIPIENT} -eq 64 ]] || die "could not derive a 32-byte recipient id from $PAYEE (got '$RECIPIENT')"
 info "payee: $PAYEE ($RECIPIENT)"
-TX_PROPOSE=$(run_ix propose -- create-proposal \
-  --config-hash "$CONFIG_HASH" --proposal-seed "$PROPOSAL_SEED" --proposal-id "$PROPOSAL_ID" \
-  --recipient "$RECIPIENT" \
-  --amount "$TRANSFER_AMOUNT" --proposer "$CREATOR")
-info "tx $TX_PROPOSE"
+if [[ "${PMSIG_RESUME:-0}" == "1" ]]; then
+  TX_PROPOSE="${PMSIG_TX_PROPOSE:?PMSIG_RESUME=1 needs PMSIG_TX_PROPOSE — the create_proposal tx hash from the original run}"
+  info "create_proposal: already on chain, tx $TX_PROPOSE"
+else
+  TX_PROPOSE=$(run_ix propose -- create-proposal \
+    --config-hash "$CONFIG_HASH" --proposal-seed "$PROPOSAL_SEED" --proposal-id "$PROPOSAL_ID" \
+    --recipient "$RECIPIENT" \
+    --amount "$TRANSFER_AMOUNT" --proposer "$CREATOR")
+  info "tx $TX_PROPOSE"
+fi
 
 # ─── The wallet must know the chain before it can prove against it ──────────────────────────────
 #
