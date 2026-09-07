@@ -82,6 +82,60 @@ fn alice_approves() -> (ApprovalClaim, ApprovalWitness, Vec<AccountWithMetadata>
     (claim, witness, pre_states)
 }
 
+/// The membership program's own output has to satisfy `validate_execution`, the same eight rules
+/// the sequencer applies to every program — and rule 7 is the one that only bites on a chain with a
+/// history:
+///
+/// > If a post state has default program owner, the pre state must have been a default account.
+///
+/// Every other test here hands the guest `Account::default()` as the approver, because that is what
+/// a wallet reports for an account on a chain that was wiped a minute ago. So does the local demo.
+/// On the public testnet the approver's account is not default, the guest echoes it back with the
+/// owner it came with — the default one — and rule 7 rejects the whole execution inside the privacy
+/// circuit: "Invalid program behavior in program […]: Post-state for account 7NcSu55… has default
+/// program owner but pre-state was not default". That cost a run, four minutes into a proof.
+///
+/// This is that account, in the executor, in a tenth of a second.
+///
+/// **It fails, and it is `#[ignore]`d because it documents an open defect rather than a fixed one.**
+/// Rules 4 and 7 close on each other: rule 4 forbids changing `program_owner`, rule 7 forbids
+/// keeping a default one unless the pre-state was wholly default. For an account that is unowned
+/// and not default there is therefore no legal output at all — so the fix cannot be in how the
+/// post-states are built. Such an account must not reach the program as a pre-state in the first
+/// place, and where it enters is still being traced.
+///
+/// Run it with `cargo test -p pmsig-sdk --test prove_membership -- --ignored`.
+#[test]
+#[ignore = "documents an open defect: LEZ rules 4 and 7 leave no legal output for an unowned, non-default approver account"]
+fn an_approver_account_that_already_exists_still_satisfies_validate_execution() {
+    use lee_core::program::{validate_execution, ProgramOutput};
+
+    let (claim, witness, mut pre_states) = alice_approves();
+
+    // What the chain reports for an account that has been used: a balance, and no program owning it.
+    // Nothing here is exotic — it is the ordinary state of a funded account.
+    pre_states[0].account.balance = 1_u8.into();
+
+    let (_cycles, journal) = execute_approval_journal(
+        &program_binary(),
+        SELF_PROGRAM_ID,
+        None,
+        &pre_states,
+        &claim,
+        &witness,
+    )
+    .expect("an honest approval executes");
+
+    let out: ProgramOutput =
+        risc0_zkvm::serde::from_slice(&journal).expect("journal decodes as ProgramOutput");
+
+    validate_execution(&out.pre_states, &out.post_states, out.self_program_id).expect(
+        "the membership program's output must satisfy validate_execution for an approver whose \
+         account already exists — the sequencer runs exactly this check, and the privacy circuit \
+         panics rather than returning an error when it fails",
+    );
+}
+
 /// SC-B.1 and SC-B.3 — a real proof, generated and verified with `RISC0_DEV_MODE=0`.
 #[test]
 #[ignore = "generates a real proof; run via scripts/prove-bench.sh"]
