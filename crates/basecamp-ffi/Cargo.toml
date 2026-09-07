@@ -24,6 +24,14 @@ crate-type = ["cdylib", "rlib"]
 nssa = { package = "lee", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
 wallet = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
 sequencer_service_rpc = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
+# The generated code also reaches for names the generator inherited from an older LEZ and from
+# SPEL. Each is the crate it was renamed from, pinned to the same revisions the rest of the
+# workspace already uses, so nothing here introduces a second version of anything.
+nssa_core = { package = "lee_core", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
+common = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
+spel_framework_core = { package = "spel-framework-core", git = "https://github.com/logos-co/spel.git", rev = "5126b7ed8a9b" }
+pmsig-multisig-core = { path = "../multisig-core" }
+hex = { workspace = true }
 borsh = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

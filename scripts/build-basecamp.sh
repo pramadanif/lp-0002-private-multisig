@@ -137,15 +137,42 @@ command -v lgx >/dev/null 2>&1 || die "the 'lgx' tool is not installed.
        Get it from https://github.com/logos-co/logos-package
        Criterion P-U2 requires a downloadable, loadable package."
 
-rm -rf app/.lgx-staging && mkdir -p app/.lgx-staging
+# `lgx add` packages one *variant* — a platform's build — and needs to be told which, plus the QML
+# entry point. A package is per-platform: this builds the variant for the machine it runs on, and
+# the other variants come from running it on that platform.
+case "$(uname -s)-$(uname -m)" in
+  Darwin-arm64)  VARIANT=darwin-arm64 ;;
+  Darwin-x86_64) VARIANT=darwin-amd64 ;;
+  Linux-x86_64)  VARIANT=linux-amd64 ;;
+  Linux-aarch64) VARIANT=linux-arm64 ;;
+  *) die "unsupported platform $(uname -s)-$(uname -m) — no lgx variant name for it" ;;
+esac
+# The manifest already names the plugin per variant; keep the package agreeing with it rather than
+# guessing a second time.
+PLUGIN_NAME=$(python3 -c "
+import json
+print(json.load(open('app/manifest.json'))['main']['$VARIANT'])" 2>/dev/null) \
+  || die "app/manifest.json does not name a plugin for variant $VARIANT"
+
+rm -rf app/.lgx-staging && mkdir -p app/.lgx-staging/qml
 cp app/build/lib*_plugin.* app/.lgx-staging/ 2>/dev/null || die "no built plugin to package"
-cp app/qml/Main.qml app/.lgx-staging/
+cp app/qml/Main.qml app/.lgx-staging/qml/
 # Without this the package loads and then fails on the first call into the program.
 cp "app/lib/libpmsig_ffi.$LIBEXT" app/.lgx-staging/ \
   || die "the FFI library is not in app/lib — stage 2b did not run"
+[[ -f "app/.lgx-staging/$PLUGIN_NAME" ]] \
+  || die "the manifest names $PLUGIN_NAME for $VARIANT but the build produced $(cd app/.lgx-staging && ls lib*_plugin.* 2>/dev/null | tr '\n' ' ')"
+
+# `lgx create` refuses to overwrite, so a second run would fail on the package the first one left.
+rm -f app/private_multisig.lgx
 ( cd app && lgx create private_multisig ) || die "lgx create failed"
-lgx add app/private_multisig.lgx -f app/.lgx-staging -y || die "lgx add failed"
-python3 scripts/patch_lgx_manifest.py app/private_multisig.lgx app/manifest.json 2>/dev/null || true
+lgx add app/private_multisig.lgx --variant "$VARIANT" --files app/.lgx-staging \
+  --main "$PLUGIN_NAME" --view qml/Main.qml -y || die "lgx add failed"
+info "variant $VARIANT packaged"
+# Not silenced: if the metadata cannot be merged, the package ships without an author or a licence
+# and nothing says so.
+python3 scripts/patch_lgx_manifest.py app/private_multisig.lgx app/manifest.json \
+  || die "merging the manifest metadata failed"
 lgx verify app/private_multisig.lgx || die "lgx verify failed"
 rm -rf app/.lgx-staging
 
