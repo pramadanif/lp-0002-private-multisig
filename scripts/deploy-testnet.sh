@@ -174,6 +174,37 @@ PARAMS=$(cargo run --quiet -p pmsig-sdk --example wallet_member -- \
 eval "$(echo "$PARAMS" | grep '=')"
 [[ "$CROSSCHECK_ACCOUNT_ID" == "ok" ]] || die "our derivation disagrees with the wallet's accounts"
 
+# Every address this run uses is derived deterministically from the wallet's accounts and the guest
+# ImageIDs, so two runs with the same inputs target the same accounts. A local chain is wiped
+# between runs and never showed this; a public testnet keeps them. Without this check a re-run
+# spends ~40 minutes on two real proofs and then fails at `execute`, or fails at create_multisig
+# with "Transaction NOT confirmed" — which reads like a network fault rather than a name collision.
+# So: look before spending anything.
+occupied=$(curl -s -X POST "$RPC" -H 'content-type: application/json' \
+  --data "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"getAccount\",\"params\":[\"$CONFIG_PDA\"]}" \
+  --max-time 20 | python3 -c '
+import sys, json
+try:
+    r = json.load(sys.stdin).get("result")
+except Exception:
+    print("unknown"); raise SystemExit
+if not r:
+    print("free"); raise SystemExit
+owner = r.get("program_owner") or []
+used = any(x for x in owner) or r.get("balance") or r.get("nonce") or (r.get("data") or [])
+print("taken" if used else "free")
+')
+case "$occupied" in
+  taken) die "the multisig this run would create already exists at $CONFIG_PDA.
+       Every address here is derived from the wallet accounts and the guest ImageIDs, so a repeat
+       run targets the same ones. Give the retry a fresh namespace:
+         PMSIG_MULTISIG_ID=\$(openssl rand -hex 32) PMSIG_PROPOSAL_ID=\$(openssl rand -hex 32) \\
+           LEE_WALLET_HOME_DIR=$LEE_WALLET_HOME_DIR ./scripts/deploy-testnet.sh
+       Record whichever ids you use — docs/DEPLOYMENT.md needs them to be verifiable." ;;
+  free)  info "config PDA $CONFIG_PDA is free" ;;
+  *)     die "could not tell whether $CONFIG_PDA is already in use; refusing to start blind" ;;
+esac
+
 run_ix() { # name, then args
   local name="$1"; shift
   "$SPEL" --idl "$REPO/artifacts/multisig-idl.json" -p "$REPO/artifacts/multisig.bin" "$@" \

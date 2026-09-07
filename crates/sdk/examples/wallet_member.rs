@@ -23,6 +23,27 @@ use serde_json::Value;
 
 const MULTISIG_ID: Digest32 = [0xA1; 32];
 const PROPOSAL_ID: Digest32 = [0xB2; 32];
+
+/// Both ids are constants, which makes every address a run derives identical to the last run's.
+/// A local chain is wiped between runs so this never showed; a public testnet is not, and there a
+/// second run collides with the accounts the first one created — `create_multisig` comes back
+/// "Transaction NOT confirmed" because the account already exists. These overrides give a retry a
+/// fresh namespace without touching the defaults every test and the local demo rely on.
+fn id_from_env(var: &str, default: Digest32) -> Result<Digest32, Box<dyn std::error::Error>> {
+    let Ok(v) = std::env::var(var) else {
+        return Ok(default);
+    };
+    let v = v.trim();
+    if v.len() != 64 {
+        return Err(format!(
+            "{var} must be 64 hex characters (32 bytes), got {} ",
+            v.len()
+        )
+        .into());
+    }
+    let bytes = hex::decode(v).map_err(|e| format!("{var} is not hex: {e}"))?;
+    Ok(<Digest32>::try_from(bytes.as_slice())?)
+}
 /// One stand-in co-member so N=3 with two real wallet accounts. Only its npk matters; nobody needs
 /// its secret, and it never approves.
 const CO_MEMBER: Digest32 = [0x33; 32];
@@ -101,21 +122,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tree = MemberTree::new(&npks).ok_or("member tree")?;
 
     let verifier = read_membership_image_id()?;
-    let config_hash = pmsig_core::config_hash(&tree.root(), 2, 3, &MULTISIG_ID, &verifier);
+    let multisig_id = id_from_env("PMSIG_MULTISIG_ID", MULTISIG_ID)?;
+    let proposal_id = id_from_env("PMSIG_PROPOSAL_ID", PROPOSAL_ID)?;
+    let config_hash = pmsig_core::config_hash(&tree.root(), 2, 3, &multisig_id, &verifier);
 
     println!("MEMBER_ROOT={}", hex::encode(tree.root()));
     println!("CONFIG_HASH={}", hex::encode(config_hash));
-    println!("MULTISIG_ID={}", hex::encode(MULTISIG_ID));
+    println!("MULTISIG_ID={}", hex::encode(multisig_id));
     // The address the multisig's own funds live at. Under INV-7 `execute` pays out of this
     // account, so a deployment has to fund it — which is what the scripts were missing.
     println!(
         "CONFIG_PDA={}",
         pmsig_sdk::address::config_address(&read_image_id("multisig")?, &config_hash)
     );
-    println!("PROPOSAL_ID={}", hex::encode(PROPOSAL_ID));
+    println!("PROPOSAL_ID={}", hex::encode(proposal_id));
     println!(
         "PROPOSAL_SEED={}",
-        hex::encode(pmsig_core::proposal_seed(&config_hash, &PROPOSAL_ID))
+        hex::encode(pmsig_core::proposal_seed(&config_hash, &proposal_id))
     );
     println!(
         "VERIFIER={}",
@@ -151,8 +174,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "MEMBER{i}_NULLIFIER={}",
             hex::encode(pmsig_core::approval_nullifier(
                 &m.nsk,
-                &MULTISIG_ID,
-                &PROPOSAL_ID
+                &multisig_id,
+                &proposal_id
             ))
         );
         println!("MEMBER{i}_WITNESS={}", wp.display());
