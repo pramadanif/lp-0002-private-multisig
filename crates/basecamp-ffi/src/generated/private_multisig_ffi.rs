@@ -6,13 +6,13 @@
 //   - `sequencer_url`: e.g. "http://127.0.0.1:3040"
 //   - `program_id_hex`: 64-char hex string identifying the program
 
+use nssa::program::Program;
+use nssa::public_transaction::{Message, WitnessSet};
+use nssa::{AccountId, ProgramId, PublicTransaction};
+use sequencer_service_rpc::RpcClient as _;
+use serde_json::{json, Value};
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use serde_json::{Value, json};
-use nssa::{AccountId, ProgramId, PublicTransaction};
-use nssa::public_transaction::{Message, WitnessSet};
-use nssa::program::Program;
-use sequencer_service_rpc::RpcClient as _;
 use wallet::WalletCore;
 
 static PROGRAM_IDL_JSON: &str = "{
@@ -329,14 +329,18 @@ static PROGRAM_IDL_JSON: &str = "{
 use pmsig_multisig_core::Instruction as ProgramInstruction;
 
 fn cstr_to_str<'a>(ptr: *const c_char) -> Result<&'a str, String> {
-    if ptr.is_null() { return Err("null pointer".into()); }
-    unsafe { CStr::from_ptr(ptr) }.to_str().map_err(|e| format!("invalid UTF-8: {}", e))
+    if ptr.is_null() {
+        return Err("null pointer".into());
+    }
+    unsafe { CStr::from_ptr(ptr) }
+        .to_str()
+        .map_err(|e| format!("invalid UTF-8: {}", e))
 }
 
 fn to_cstring(s: String) -> *mut c_char {
-    CString::new(s).unwrap_or_else(|_|
-        CString::new(r#"{"success":false,"error":"null byte"}"#).unwrap()
-    ).into_raw()
+    CString::new(s)
+        .unwrap_or_else(|_| CString::new(r#"{"success":false,"error":"null byte"}"#).unwrap())
+        .into_raw()
 }
 
 fn error_json(msg: &str) -> *mut c_char {
@@ -347,10 +351,12 @@ fn error_json(msg: &str) -> *mut c_char {
 
 fn ffi_call(f: impl FnOnce() -> Result<String, String>) -> *mut c_char {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
-        Ok(Ok(r))  => to_cstring(r),
+        Ok(Ok(r)) => to_cstring(r),
         Ok(Err(e)) => error_json(&e),
         Err(payload) => {
-            let msg = payload.downcast_ref::<&str>().copied()
+            let msg = payload
+                .downcast_ref::<&str>()
+                .copied()
                 .or_else(|| payload.downcast_ref::<String>().map(|s| s.as_str()))
                 .unwrap_or("<unknown panic>");
             error_json(&format!("panic: {}", msg))
@@ -364,7 +370,9 @@ fn compute_pda_with_program(program_id: &ProgramId, seeds: &[&[u8]]) -> Result<A
 
 fn parse_program_id_hex(s: &str) -> Result<ProgramId, String> {
     let s = s.trim_start_matches("0x");
-    if s.len() != 64 { return Err(format!("program_id hex must be 64 chars, got {}", s.len())); }
+    if s.len() != 64 {
+        return Err(format!("program_id hex must be 64 chars, got {}", s.len()));
+    }
     let bytes = hex::decode(s).map_err(|e| format!("invalid hex: {}", e))?;
     let mut pid = [0u32; 8];
     for (i, chunk) in bytes.chunks(4).enumerate() {
@@ -387,56 +395,76 @@ fn parse_bytes32(s: &str) -> Result<[u8; 32], String> {
 
 static ASYNC_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> = std::sync::OnceLock::new();
 fn get_runtime() -> &'static tokio::runtime::Runtime {
-    ASYNC_RUNTIME.get_or_init(|| tokio::runtime::Runtime::new().expect("failed to create Tokio runtime"))
+    ASYNC_RUNTIME
+        .get_or_init(|| tokio::runtime::Runtime::new().expect("failed to create Tokio runtime"))
 }
 
 static WALLET_INIT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 fn init_wallet(v: &Value) -> Result<WalletCore, String> {
-    let _guard = WALLET_INIT_LOCK.lock().map_err(|_| "wallet lock poisoned".to_string())?;
-    let wallet_path = v["wallet_path"].as_str().ok_or("missing required field: wallet_path")?;
+    let _guard = WALLET_INIT_LOCK
+        .lock()
+        .map_err(|_| "wallet lock poisoned".to_string())?;
+    let wallet_path = v["wallet_path"]
+        .as_str()
+        .ok_or("missing required field: wallet_path")?;
     if wallet_path.is_empty() || wallet_path.contains('\0') {
         return Err("wallet_path must be a non-empty path without null bytes".into());
     }
-    let sequencer_url = v["sequencer_url"].as_str().ok_or("missing required field: sequencer_url")?;
+    let sequencer_url = v["sequencer_url"]
+        .as_str()
+        .ok_or("missing required field: sequencer_url")?;
     std::env::set_var("LEE_WALLET_HOME_DIR", wallet_path);
     std::env::set_var("NSSA_SEQUENCER_URL", sequencer_url);
-    get_runtime().block_on(WalletCore::from_env()).map_err(|e| format!("wallet init: {}", e))
+    get_runtime()
+        .block_on(WalletCore::from_env())
+        .map_err(|e| format!("wallet init: {}", e))
 }
 
 /// FFI: create_multisig instruction.
 #[no_mangle]
 pub extern "C" fn private_multisig_create_multisig(args_json: *const c_char) -> *mut c_char {
     let args = match cstr_to_str(args_json) {
-        Ok(s) => s, Err(e) => return error_json(&e),
+        Ok(s) => s,
+        Err(e) => return error_json(&e),
     };
     ffi_call(move || private_multisig_create_multisig_impl(args))
 }
 
 fn private_multisig_create_multisig_impl(args: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(args).map_err(|e| format!("invalid JSON: {}", e))?;
-    let program_id = parse_program_id_hex(v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
+    let program_id = parse_program_id_hex(
+        v["program_id_hex"]
+            .as_str()
+            .ok_or("missing program_id_hex")?,
+    )?;
     let wallet = init_wallet(&v)?;
 
-    let config_hash = parse_bytes32(v["config_hash"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let member_root = parse_bytes32(v["member_root"].as_str().ok_or("expected string for [u8; 32]")?)?;
+    let config_hash = parse_bytes32(
+        v["config_hash"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let member_root = parse_bytes32(
+        v["member_root"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
     let m = v["m"].as_u64().ok_or("expected number")? as u8;
     let n = v["n"].as_u64().ok_or("expected number")? as u8;
-    let multisig_id = parse_bytes32(v["multisig_id"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let membership_program_id = serde_json::from_value(v["membership_program_id"].clone()).map_err(|e| format!("parse error: {}", e))?;
+    let multisig_id = parse_bytes32(
+        v["multisig_id"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let membership_program_id = serde_json::from_value(v["membership_program_id"].clone())
+        .map_err(|e| format!("parse error: {}", e))?;
 
     let creator = parse_account_id(v["creator"].as_str().ok_or("missing creator")?)?;
-    let config = compute_pda_with_program(&program_id, &[
-        config_hash.as_ref(),
-    ])?;
+    let config = compute_pda_with_program(&program_id, &[config_hash.as_ref()])?;
 
-    let account_ids: Vec<AccountId> = vec![
-        config,
-        creator,
-    ];
-    let signer_ids: Vec<AccountId> = vec![
-        creator,
-    ];
+    let account_ids: Vec<AccountId> = vec![config, creator];
+    let signer_ids: Vec<AccountId> = vec![creator];
 
     let instruction = ProgramInstruction::CreateMultisig {
         config_hash,
@@ -449,7 +477,9 @@ fn private_multisig_create_multisig_impl(args: &str) -> Result<String, String> {
 
     let rt = get_runtime();
     let tx_hash = rt.block_on(async {
-        let nonces = wallet.get_accounts_nonces(&signer_ids).await
+        let nonces = wallet
+            .get_accounts_nonces(&signer_ids)
+            .await
             .map_err(|e| format!("nonces: {}", e))?;
         let mut signing_keys = Vec::new();
         for sid in &signer_ids {
@@ -462,11 +492,17 @@ fn private_multisig_create_multisig_impl(args: &str) -> Result<String, String> {
             .map_err(|e| format!("message: {:?}", e))?;
         let witness_set = WitnessSet::for_message(&message, &signing_keys);
         let tx = PublicTransaction::new(message, witness_set);
-        let raw = wallet.helm_owned().send_transaction(common::transaction::LeeTransaction::Public(tx)).await
+        let raw = wallet
+            .helm_owned()
+            .send_transaction(common::transaction::LeeTransaction::Public(tx))
+            .await
             .map_err(|e| format!("submit: {}", e))?;
         let tx_hash_hex = hex::encode(raw.0);
         let poller = wallet.poller_helm();
-        poller.poll_tx(raw).await.map_err(|e| format!("confirm: {}", e))?;
+        poller
+            .poll_tx(raw)
+            .await
+            .map_err(|e| format!("confirm: {}", e))?;
         Ok::<String, String>(tx_hash_hex)
     })?;
 
@@ -477,38 +513,57 @@ fn private_multisig_create_multisig_impl(args: &str) -> Result<String, String> {
 #[no_mangle]
 pub extern "C" fn private_multisig_create_proposal(args_json: *const c_char) -> *mut c_char {
     let args = match cstr_to_str(args_json) {
-        Ok(s) => s, Err(e) => return error_json(&e),
+        Ok(s) => s,
+        Err(e) => return error_json(&e),
     };
     ffi_call(move || private_multisig_create_proposal_impl(args))
 }
 
 fn private_multisig_create_proposal_impl(args: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(args).map_err(|e| format!("invalid JSON: {}", e))?;
-    let program_id = parse_program_id_hex(v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
+    let program_id = parse_program_id_hex(
+        v["program_id_hex"]
+            .as_str()
+            .ok_or("missing program_id_hex")?,
+    )?;
     let wallet = init_wallet(&v)?;
 
-    let config_hash = parse_bytes32(v["config_hash"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let proposal_seed = parse_bytes32(v["proposal_seed"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let proposal_id = parse_bytes32(v["proposal_id"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let recipient = parse_bytes32(v["recipient"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let amount = { let _v = &v["amount"]; if let Some(_s) = _v.as_str() { _s.parse::<u128>().map_err(|_| format!("invalid u128: {}", _s))? } else { _v.as_u64().ok_or("expected u128")? as u128 } };
+    let config_hash = parse_bytes32(
+        v["config_hash"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let proposal_seed = parse_bytes32(
+        v["proposal_seed"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let proposal_id = parse_bytes32(
+        v["proposal_id"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let recipient = parse_bytes32(
+        v["recipient"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let amount = {
+        let _v = &v["amount"];
+        if let Some(_s) = _v.as_str() {
+            _s.parse::<u128>()
+                .map_err(|_| format!("invalid u128: {}", _s))?
+        } else {
+            _v.as_u64().ok_or("expected u128")? as u128
+        }
+    };
 
     let proposer = parse_account_id(v["proposer"].as_str().ok_or("missing proposer")?)?;
-    let config = compute_pda_with_program(&program_id, &[
-        config_hash.as_ref(),
-    ])?;
-    let proposal = compute_pda_with_program(&program_id, &[
-        proposal_seed.as_ref(),
-    ])?;
+    let config = compute_pda_with_program(&program_id, &[config_hash.as_ref()])?;
+    let proposal = compute_pda_with_program(&program_id, &[proposal_seed.as_ref()])?;
 
-    let account_ids: Vec<AccountId> = vec![
-        config,
-        proposal,
-        proposer,
-    ];
-    let signer_ids: Vec<AccountId> = vec![
-        proposer,
-    ];
+    let account_ids: Vec<AccountId> = vec![config, proposal, proposer];
+    let signer_ids: Vec<AccountId> = vec![proposer];
 
     let instruction = ProgramInstruction::CreateProposal {
         config_hash,
@@ -520,7 +575,9 @@ fn private_multisig_create_proposal_impl(args: &str) -> Result<String, String> {
 
     let rt = get_runtime();
     let tx_hash = rt.block_on(async {
-        let nonces = wallet.get_accounts_nonces(&signer_ids).await
+        let nonces = wallet
+            .get_accounts_nonces(&signer_ids)
+            .await
             .map_err(|e| format!("nonces: {}", e))?;
         let mut signing_keys = Vec::new();
         for sid in &signer_ids {
@@ -533,11 +590,17 @@ fn private_multisig_create_proposal_impl(args: &str) -> Result<String, String> {
             .map_err(|e| format!("message: {:?}", e))?;
         let witness_set = WitnessSet::for_message(&message, &signing_keys);
         let tx = PublicTransaction::new(message, witness_set);
-        let raw = wallet.helm_owned().send_transaction(common::transaction::LeeTransaction::Public(tx)).await
+        let raw = wallet
+            .helm_owned()
+            .send_transaction(common::transaction::LeeTransaction::Public(tx))
+            .await
             .map_err(|e| format!("submit: {}", e))?;
         let tx_hash_hex = hex::encode(raw.0);
         let poller = wallet.poller_helm();
-        poller.poll_tx(raw).await.map_err(|e| format!("confirm: {}", e))?;
+        poller
+            .poll_tx(raw)
+            .await
+            .map_err(|e| format!("confirm: {}", e))?;
         Ok::<String, String>(tx_hash_hex)
     })?;
 
@@ -548,37 +611,54 @@ fn private_multisig_create_proposal_impl(args: &str) -> Result<String, String> {
 #[no_mangle]
 pub extern "C" fn private_multisig_approve(args_json: *const c_char) -> *mut c_char {
     let args = match cstr_to_str(args_json) {
-        Ok(s) => s, Err(e) => return error_json(&e),
+        Ok(s) => s,
+        Err(e) => return error_json(&e),
     };
     ffi_call(move || private_multisig_approve_impl(args))
 }
 
 fn private_multisig_approve_impl(args: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(args).map_err(|e| format!("invalid JSON: {}", e))?;
-    let program_id = parse_program_id_hex(v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
+    let program_id = parse_program_id_hex(
+        v["program_id_hex"]
+            .as_str()
+            .ok_or("missing program_id_hex")?,
+    )?;
     let wallet = init_wallet(&v)?;
 
-    let config_hash = parse_bytes32(v["config_hash"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let proposal_seed = parse_bytes32(v["proposal_seed"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let member_root = parse_bytes32(v["member_root"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let claimed_nullifier = parse_bytes32(v["claimed_nullifier"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let witness = v["witness"].as_array().ok_or("expected array")?.iter().map(|item| Ok(item.as_u64().ok_or("expected number")? as u8)).collect::<Result<Vec<_>, String>>()?;
+    let config_hash = parse_bytes32(
+        v["config_hash"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let proposal_seed = parse_bytes32(
+        v["proposal_seed"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let member_root = parse_bytes32(
+        v["member_root"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let claimed_nullifier = parse_bytes32(
+        v["claimed_nullifier"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let witness = v["witness"]
+        .as_array()
+        .ok_or("expected array")?
+        .iter()
+        .map(|item| Ok(item.as_u64().ok_or("expected number")? as u8))
+        .collect::<Result<Vec<_>, String>>()?;
 
     let approver = parse_account_id(v["approver"].as_str().ok_or("missing approver")?)?;
-    let config = compute_pda_with_program(&program_id, &[
-        config_hash.as_ref(),
-    ])?;
-    let proposal = compute_pda_with_program(&program_id, &[
-        proposal_seed.as_ref(),
-    ])?;
+    let config = compute_pda_with_program(&program_id, &[config_hash.as_ref()])?;
+    let proposal = compute_pda_with_program(&program_id, &[proposal_seed.as_ref()])?;
 
-    let account_ids: Vec<AccountId> = vec![
-        config,
-        proposal,
-        approver,
-    ];
-    let signer_ids: Vec<AccountId> = vec![
-    ];
+    let account_ids: Vec<AccountId> = vec![config, proposal, approver];
+    let signer_ids: Vec<AccountId> = vec![];
 
     let instruction = ProgramInstruction::Approve {
         config_hash,
@@ -590,7 +670,9 @@ fn private_multisig_approve_impl(args: &str) -> Result<String, String> {
 
     let rt = get_runtime();
     let tx_hash = rt.block_on(async {
-        let nonces = wallet.get_accounts_nonces(&signer_ids).await
+        let nonces = wallet
+            .get_accounts_nonces(&signer_ids)
+            .await
             .map_err(|e| format!("nonces: {}", e))?;
         let mut signing_keys = Vec::new();
         for sid in &signer_ids {
@@ -603,11 +685,17 @@ fn private_multisig_approve_impl(args: &str) -> Result<String, String> {
             .map_err(|e| format!("message: {:?}", e))?;
         let witness_set = WitnessSet::for_message(&message, &signing_keys);
         let tx = PublicTransaction::new(message, witness_set);
-        let raw = wallet.helm_owned().send_transaction(common::transaction::LeeTransaction::Public(tx)).await
+        let raw = wallet
+            .helm_owned()
+            .send_transaction(common::transaction::LeeTransaction::Public(tx))
+            .await
             .map_err(|e| format!("submit: {}", e))?;
         let tx_hash_hex = hex::encode(raw.0);
         let poller = wallet.poller_helm();
-        poller.poll_tx(raw).await.map_err(|e| format!("confirm: {}", e))?;
+        poller
+            .poll_tx(raw)
+            .await
+            .map_err(|e| format!("confirm: {}", e))?;
         Ok::<String, String>(tx_hash_hex)
     })?;
 
@@ -618,37 +706,39 @@ fn private_multisig_approve_impl(args: &str) -> Result<String, String> {
 #[no_mangle]
 pub extern "C" fn private_multisig_execute(args_json: *const c_char) -> *mut c_char {
     let args = match cstr_to_str(args_json) {
-        Ok(s) => s, Err(e) => return error_json(&e),
+        Ok(s) => s,
+        Err(e) => return error_json(&e),
     };
     ffi_call(move || private_multisig_execute_impl(args))
 }
 
 fn private_multisig_execute_impl(args: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(args).map_err(|e| format!("invalid JSON: {}", e))?;
-    let program_id = parse_program_id_hex(v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
+    let program_id = parse_program_id_hex(
+        v["program_id_hex"]
+            .as_str()
+            .ok_or("missing program_id_hex")?,
+    )?;
     let wallet = init_wallet(&v)?;
 
-    let config_hash = parse_bytes32(v["config_hash"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let proposal_seed = parse_bytes32(v["proposal_seed"].as_str().ok_or("expected string for [u8; 32]")?)?;
+    let config_hash = parse_bytes32(
+        v["config_hash"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let proposal_seed = parse_bytes32(
+        v["proposal_seed"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
 
     let recipient = parse_account_id(v["recipient"].as_str().ok_or("missing recipient")?)?;
     let submitter = parse_account_id(v["submitter"].as_str().ok_or("missing submitter")?)?;
-    let config = compute_pda_with_program(&program_id, &[
-        config_hash.as_ref(),
-    ])?;
-    let proposal = compute_pda_with_program(&program_id, &[
-        proposal_seed.as_ref(),
-    ])?;
+    let config = compute_pda_with_program(&program_id, &[config_hash.as_ref()])?;
+    let proposal = compute_pda_with_program(&program_id, &[proposal_seed.as_ref()])?;
 
-    let account_ids: Vec<AccountId> = vec![
-        config,
-        proposal,
-        recipient,
-        submitter,
-    ];
-    let signer_ids: Vec<AccountId> = vec![
-        submitter,
-    ];
+    let account_ids: Vec<AccountId> = vec![config, proposal, recipient, submitter];
+    let signer_ids: Vec<AccountId> = vec![submitter];
 
     let instruction = ProgramInstruction::Execute {
         config_hash,
@@ -657,7 +747,9 @@ fn private_multisig_execute_impl(args: &str) -> Result<String, String> {
 
     let rt = get_runtime();
     let tx_hash = rt.block_on(async {
-        let nonces = wallet.get_accounts_nonces(&signer_ids).await
+        let nonces = wallet
+            .get_accounts_nonces(&signer_ids)
+            .await
             .map_err(|e| format!("nonces: {}", e))?;
         let mut signing_keys = Vec::new();
         for sid in &signer_ids {
@@ -670,11 +762,17 @@ fn private_multisig_execute_impl(args: &str) -> Result<String, String> {
             .map_err(|e| format!("message: {:?}", e))?;
         let witness_set = WitnessSet::for_message(&message, &signing_keys);
         let tx = PublicTransaction::new(message, witness_set);
-        let raw = wallet.helm_owned().send_transaction(common::transaction::LeeTransaction::Public(tx)).await
+        let raw = wallet
+            .helm_owned()
+            .send_transaction(common::transaction::LeeTransaction::Public(tx))
+            .await
             .map_err(|e| format!("submit: {}", e))?;
         let tx_hash_hex = hex::encode(raw.0);
         let poller = wallet.poller_helm();
-        poller.poll_tx(raw).await.map_err(|e| format!("confirm: {}", e))?;
+        poller
+            .poll_tx(raw)
+            .await
+            .map_err(|e| format!("confirm: {}", e))?;
         Ok::<String, String>(tx_hash_hex)
     })?;
 
@@ -683,7 +781,9 @@ fn private_multisig_execute_impl(args: &str) -> Result<String, String> {
 
 #[no_mangle]
 pub extern "C" fn private_multisig_free_string(s: *mut c_char) {
-    if !s.is_null() { unsafe { drop(CString::from_raw(s)) }; }
+    if !s.is_null() {
+        unsafe { drop(CString::from_raw(s)) };
+    }
 }
 
 #[no_mangle]
@@ -695,30 +795,53 @@ pub extern "C" fn private_multisig_version() -> *mut c_char {
 pub extern "C" fn private_multisig_program_id() -> *mut c_char {
     let rel = "methods/guest/target/riscv32im-risc0-zkvm-elf/docker/private_multisig.bin";
     let data = std::env::current_dir().ok().and_then(|cwd| {
-        cwd.ancestors().take(6).find_map(|dir| std::fs::read(dir.join(rel)).ok())
+        cwd.ancestors()
+            .take(6)
+            .find_map(|dir| std::fs::read(dir.join(rel)).ok())
     });
-    let data = match data { Some(d) => d, None => return std::ptr::null_mut() };
-    let program = match Program::new(data.into()) { Ok(p) => p, Err(_) => return std::ptr::null_mut() };
+    let data = match data {
+        Some(d) => d,
+        None => return std::ptr::null_mut(),
+    };
+    let program = match Program::new(data.into()) {
+        Ok(p) => p,
+        Err(_) => return std::ptr::null_mut(),
+    };
     let id = program.id();
-    let hex: String = id.iter().flat_map(|w| w.to_le_bytes()).map(|b| format!("{:02x}", b)).collect();
+    let hex: String = id
+        .iter()
+        .flat_map(|w| w.to_le_bytes())
+        .map(|b| format!("{:02x}", b))
+        .collect();
     let json = json!({"program_id_hex": hex}).to_string();
-    CString::new(json).map(|cs| cs.into_raw()).unwrap_or(std::ptr::null_mut())
+    CString::new(json)
+        .map(|cs| cs.into_raw())
+        .unwrap_or(std::ptr::null_mut())
 }
 
 /// FFI: ping the sequencer to verify wallet + network connectivity.
 #[no_mangle]
 pub extern "C" fn private_multisig_check_connection(args_json: *const c_char) -> *mut c_char {
-    let args = match cstr_to_str(args_json) { Ok(s) => s, Err(e) => return error_json(&e) };
+    let args = match cstr_to_str(args_json) {
+        Ok(s) => s,
+        Err(e) => return error_json(&e),
+    };
     ffi_call(move || private_multisig_check_connection_impl(args))
 }
 
 fn private_multisig_check_connection_impl(args: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(args).map_err(|e| format!("invalid JSON: {}", e))?;
-    let sequencer_url = v["sequencer_url"].as_str().ok_or("missing sequencer_url")?.to_string();
+    let sequencer_url = v["sequencer_url"]
+        .as_str()
+        .ok_or("missing sequencer_url")?
+        .to_string();
     let wallet = init_wallet(&v)?;
     let rt = get_runtime();
     rt.block_on(async {
-        wallet.get_accounts_nonces(&[]).await.map_err(|e| format!("ping: {}", e))
+        wallet
+            .get_accounts_nonces(&[])
+            .await
+            .map_err(|e| format!("ping: {}", e))
     })?;
     Ok(json!({"success": true, "status": "ok", "sequencer_url": sequencer_url}).to_string())
 }
@@ -726,7 +849,10 @@ fn private_multisig_check_connection_impl(args: &str) -> Result<String, String> 
 /// FFI: inspect an account — returns data size, hex preview, and signing-key presence.
 #[no_mangle]
 pub extern "C" fn private_multisig_inspect_account(args_json: *const c_char) -> *mut c_char {
-    let args = match cstr_to_str(args_json) { Ok(s) => s, Err(e) => return error_json(&e) };
+    let args = match cstr_to_str(args_json) {
+        Ok(s) => s,
+        Err(e) => return error_json(&e),
+    };
     ffi_call(move || private_multisig_inspect_account_impl(args))
 }
 
@@ -736,33 +862,49 @@ fn private_multisig_inspect_account_impl(args: &str) -> Result<String, String> {
     let account_id = parse_account_id(v["account_id"].as_str().ok_or("missing account_id")?)?;
     let rt = get_runtime();
     let account = rt.block_on(async {
-        wallet.get_account_public(account_id).await.map_err(|e| format!("get_account_public: {}", e))
+        wallet
+            .get_account_public(account_id)
+            .await
+            .map_err(|e| format!("get_account_public: {}", e))
     })?;
     let has_key = wallet.get_account_public_signing_key(account_id).is_some();
     let data_len = account.data.len();
     let preview_len = data_len.min(32);
     let data_preview = hex::encode(&account.data[..preview_len]);
-    let owner_bytes: Vec<u8> = account.program_owner.iter().flat_map(|w: &u32| w.to_le_bytes()).collect();
+    let owner_bytes: Vec<u8> = account
+        .program_owner
+        .iter()
+        .flat_map(|w: &u32| w.to_le_bytes())
+        .collect();
     let program_owner_hex = hex::encode(&owner_bytes);
     let is_uninitialized = account.program_owner == [0u32; 8];
-    let maybe_program_id = v["program_id_hex"].as_str()
+    let maybe_program_id = v["program_id_hex"]
+        .as_str()
         .filter(|s| !s.is_empty())
         .map(|s| parse_program_id_hex(s))
         .transpose()?;
-    let status = if is_uninitialized { "uninitialized" }
-        else if maybe_program_id.map_or(false, |pid| account.program_owner == pid) { "owned" }
-        else { "foreign" };
+    let status = if is_uninitialized {
+        "uninitialized"
+    } else if maybe_program_id.map_or(false, |pid| account.program_owner == pid) {
+        "owned"
+    } else {
+        "foreign"
+    };
     Ok(json!({
         "success": true, "data_len": data_len, "data_preview": data_preview,
         "has_signing_key": has_key, "program_owner": program_owner_hex, "status": status
-    }).to_string())
+    })
+    .to_string())
 }
 
 /// FFI: list accounts in the wallet — delegates to `wallet account list --json`.
 /// TEMPORARY: uses `wallet` CLI subprocess until the library API is available.
 #[no_mangle]
 pub extern "C" fn private_multisig_list_accounts(args_json: *const c_char) -> *mut c_char {
-    let args = match cstr_to_str(args_json) { Ok(s) => s, Err(e) => return error_json(&e) };
+    let args = match cstr_to_str(args_json) {
+        Ok(s) => s,
+        Err(e) => return error_json(&e),
+    };
     ffi_call(move || private_multisig_list_accounts_impl(args))
 }
 
@@ -783,16 +925,24 @@ fn private_multisig_list_accounts_impl(args: &str) -> Result<String, String> {
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
     // Output format per line: `{path} {Public|Private}/{id} [optional-tag]`
-    let raw: Vec<(String, String, String)> = stdout.lines()
+    let raw: Vec<(String, String, String)> = stdout
+        .lines()
         .filter_map(|line| {
-            let id = line.split_whitespace()
+            let id = line
+                .split_whitespace()
                 .find(|s| s.starts_with("Public/") || s.starts_with("Private/"))?;
-            let label = line.split_whitespace()
+            let label = line
+                .split_whitespace()
                 .find(|s| s.starts_with('[') && s.ends_with(']'))
                 .map(|s| s.trim_matches(|c: char| c == '[' || c == ']').to_string())
                 .unwrap_or_default();
-            let path = line.trim_end()
-                .split(id).next().unwrap_or("").trim().to_string();
+            let path = line
+                .trim_end()
+                .split(id)
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_string();
             Some((id.to_string(), label, path))
         })
         .collect();
@@ -800,7 +950,8 @@ fn private_multisig_list_accounts_impl(args: &str) -> Result<String, String> {
     // Classify each account (owner → uninitialized / owned / foreign).
     // Falls back to status "unknown" when sequencer is unreachable.
     let maybe_wallet = init_wallet(&v).ok();
-    let maybe_program_id = v["program_id_hex"].as_str()
+    let maybe_program_id = v["program_id_hex"]
+        .as_str()
         .filter(|s| !s.is_empty())
         .and_then(|s| parse_program_id_hex(s).ok());
     let rt = get_runtime();
@@ -809,17 +960,25 @@ fn private_multisig_list_accounts_impl(args: &str) -> Result<String, String> {
         for (id, label, path) in &raw {
             // Strip "Public/" or "Private/" prefix before parsing
             let raw_id = id.split('/').last().unwrap_or(id.as_str());
-            let status = if let (Some(wallet), Ok(aid)) = (&maybe_wallet, parse_account_id(raw_id)) {
+            let status = if let (Some(wallet), Ok(aid)) = (&maybe_wallet, parse_account_id(raw_id))
+            {
                 match wallet.get_account_public(aid).await {
                     Ok(account) => {
                         let is_uninit = account.program_owner == [0u32; 8];
-                        if is_uninit { "uninitialized" }
-                        else if maybe_program_id.map_or(false, |pid| account.program_owner == pid) { "owned" }
-                        else { "foreign" }
+                        if is_uninit {
+                            "uninitialized"
+                        } else if maybe_program_id.map_or(false, |pid| account.program_owner == pid)
+                        {
+                            "owned"
+                        } else {
+                            "foreign"
+                        }
                     }
                     Err(_) => "unknown",
                 }
-            } else { "unknown" };
+            } else {
+                "unknown"
+            };
             result.push(json!({"id": id, "label": label, "path": path, "status": status}));
         }
         result
@@ -831,7 +990,10 @@ fn private_multisig_list_accounts_impl(args: &str) -> Result<String, String> {
 /// TEMPORARY: uses `wallet` CLI subprocess until the library API is available.
 #[no_mangle]
 pub extern "C" fn private_multisig_create_account(args_json: *const c_char) -> *mut c_char {
-    let args = match cstr_to_str(args_json) { Ok(s) => s, Err(e) => return error_json(&e) };
+    let args = match cstr_to_str(args_json) {
+        Ok(s) => s,
+        Err(e) => return error_json(&e),
+    };
     ffi_call(move || private_multisig_create_account_impl(args))
 }
 
@@ -846,13 +1008,17 @@ fn private_multisig_create_account_impl(args: &str) -> Result<String, String> {
     if let Some(label) = v["label"].as_str().filter(|s| !s.is_empty()) {
         cmd.args(["--label", label]);
     }
-    let output = cmd.env("LEE_WALLET_HOME_DIR", wallet_path)
+    let output = cmd
+        .env("LEE_WALLET_HOME_DIR", wallet_path)
         .output()
         .map_err(|e| format!("wallet CLI: {}", e))?;
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
     if !output.status.success() {
-        return Err(format!("wallet account new: {}", if stderr.is_empty() { &stdout } else { &stderr }));
+        return Err(format!(
+            "wallet account new: {}",
+            if stderr.is_empty() { &stdout } else { &stderr }
+        ));
     }
     // stdout from `wallet account new public` is the new account ID
     Ok(json!({"success": true, "account_id": stdout}).to_string())
@@ -861,7 +1027,10 @@ fn private_multisig_create_account_impl(args: &str) -> Result<String, String> {
 /// FFI: decode an account's data against each known IDL type, returning the first match.
 #[no_mangle]
 pub extern "C" fn private_multisig_decode_account(args_json: *const c_char) -> *mut c_char {
-    let args = match cstr_to_str(args_json) { Ok(s) => s, Err(e) => return error_json(&e) };
+    let args = match cstr_to_str(args_json) {
+        Ok(s) => s,
+        Err(e) => return error_json(&e),
+    };
     ffi_call(move || private_multisig_decode_account_impl(args))
 }
 
@@ -871,13 +1040,19 @@ fn private_multisig_decode_account_impl(args: &str) -> Result<String, String> {
     let account_id = parse_account_id(v["account_id"].as_str().ok_or("missing account_id")?)?;
     let rt = get_runtime();
     let account = rt.block_on(async {
-        wallet.get_account_public(account_id).await.map_err(|e| format!("get_account_public: {}", e))
+        wallet
+            .get_account_public(account_id)
+            .await
+            .map_err(|e| format!("get_account_public: {}", e))
     })?;
     if account.data.is_empty() {
-        return Ok(json!({"success": true, "status": "uninitialized", "type": null, "fields": null}).to_string());
+        return Ok(
+            json!({"success": true, "status": "uninitialized", "type": null, "fields": null})
+                .to_string(),
+        );
     }
-    let idl: spel_framework_core::idl::SpelIdl = serde_json::from_str(PROGRAM_IDL_JSON)
-        .map_err(|e| format!("IDL parse: {}", e))?;
+    let idl: spel_framework_core::idl::SpelIdl =
+        serde_json::from_str(PROGRAM_IDL_JSON).map_err(|e| format!("IDL parse: {}", e))?;
     match spel_framework_core::decode::decode_account_data_try_all(&account.data, &idl) {
         Some((type_name, fields)) => Ok(json!({"success": true, "type": type_name, "fields": fields}).to_string()),
         None => Ok(json!({"success": true, "type": null, "fields": null, "raw_hex": hex::encode(&account.data)}).to_string()),
@@ -904,25 +1079,40 @@ pub fn compute_proposal_pda(program_id: &ProgramId, proposal_seed: &[u8; 32]) ->
 #[no_mangle]
 pub extern "C" fn private_multisig_fetch_config(args_json: *const c_char) -> *mut c_char {
     ffi_call(move || {
-        let args_str = match cstr_to_str(args_json) { Ok(s) => s.to_owned(), Err(e) => return Err(e) };
+        let args_str = match cstr_to_str(args_json) {
+            Ok(s) => s.to_owned(),
+            Err(e) => return Err(e),
+        };
         private_multisig_fetch_config_impl(&args_str)
     })
 }
 
 fn private_multisig_fetch_config_impl(args_str: &str) -> Result<String, String> {
-    let args: serde_json::Value = serde_json::from_str(args_str).map_err(|e| format!("invalid JSON: {e}"))?;
-    let program_id = parse_program_id_hex(args["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
+    let args: serde_json::Value =
+        serde_json::from_str(args_str).map_err(|e| format!("invalid JSON: {e}"))?;
+    let program_id = parse_program_id_hex(
+        args["program_id_hex"]
+            .as_str()
+            .ok_or("missing program_id_hex")?,
+    )?;
     let wallet = init_wallet(&args)?;
-        let config_hash = parse_bytes32(args["config_hash"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let pda = compute_pda_with_program(&program_id, &[
-        config_hash.as_ref(),
-    ])?;
+    let config_hash = parse_bytes32(
+        args["config_hash"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let pda = compute_pda_with_program(&program_id, &[config_hash.as_ref()])?;
     let rt = get_runtime();
     let account = rt.block_on(async {
-        wallet.get_account_public(pda).await.map_err(|e| format!("get_account_public: {e}"))
+        wallet
+            .get_account_public(pda)
+            .await
+            .map_err(|e| format!("get_account_public: {e}"))
     })?;
-    let idl: spel_framework_core::idl::SpelIdl = serde_json::from_str(PROGRAM_IDL_JSON).map_err(|e| format!("IDL: {e}"))?;
-    let state = match spel_framework_core::decode::decode_account_data_try_all(&account.data, &idl) {
+    let idl: spel_framework_core::idl::SpelIdl =
+        serde_json::from_str(PROGRAM_IDL_JSON).map_err(|e| format!("IDL: {e}"))?;
+    let state = match spel_framework_core::decode::decode_account_data_try_all(&account.data, &idl)
+    {
         Some((_type_name, fields)) => fields,
         None => serde_json::Value::Object(serde_json::Map::new()),
     };
@@ -933,25 +1123,40 @@ fn private_multisig_fetch_config_impl(args_str: &str) -> Result<String, String> 
 #[no_mangle]
 pub extern "C" fn private_multisig_fetch_proposal(args_json: *const c_char) -> *mut c_char {
     ffi_call(move || {
-        let args_str = match cstr_to_str(args_json) { Ok(s) => s.to_owned(), Err(e) => return Err(e) };
+        let args_str = match cstr_to_str(args_json) {
+            Ok(s) => s.to_owned(),
+            Err(e) => return Err(e),
+        };
         private_multisig_fetch_proposal_impl(&args_str)
     })
 }
 
 fn private_multisig_fetch_proposal_impl(args_str: &str) -> Result<String, String> {
-    let args: serde_json::Value = serde_json::from_str(args_str).map_err(|e| format!("invalid JSON: {e}"))?;
-    let program_id = parse_program_id_hex(args["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
+    let args: serde_json::Value =
+        serde_json::from_str(args_str).map_err(|e| format!("invalid JSON: {e}"))?;
+    let program_id = parse_program_id_hex(
+        args["program_id_hex"]
+            .as_str()
+            .ok_or("missing program_id_hex")?,
+    )?;
     let wallet = init_wallet(&args)?;
-        let proposal_seed = parse_bytes32(args["proposal_seed"].as_str().ok_or("expected string for [u8; 32]")?)?;
-    let pda = compute_pda_with_program(&program_id, &[
-        proposal_seed.as_ref(),
-    ])?;
+    let proposal_seed = parse_bytes32(
+        args["proposal_seed"]
+            .as_str()
+            .ok_or("expected string for [u8; 32]")?,
+    )?;
+    let pda = compute_pda_with_program(&program_id, &[proposal_seed.as_ref()])?;
     let rt = get_runtime();
     let account = rt.block_on(async {
-        wallet.get_account_public(pda).await.map_err(|e| format!("get_account_public: {e}"))
+        wallet
+            .get_account_public(pda)
+            .await
+            .map_err(|e| format!("get_account_public: {e}"))
     })?;
-    let idl: spel_framework_core::idl::SpelIdl = serde_json::from_str(PROGRAM_IDL_JSON).map_err(|e| format!("IDL: {e}"))?;
-    let state = match spel_framework_core::decode::decode_account_data_try_all(&account.data, &idl) {
+    let idl: spel_framework_core::idl::SpelIdl =
+        serde_json::from_str(PROGRAM_IDL_JSON).map_err(|e| format!("IDL: {e}"))?;
+    let state = match spel_framework_core::decode::decode_account_data_try_all(&account.data, &idl)
+    {
         Some((_type_name, fields)) => fields,
         None => serde_json::Value::Object(serde_json::Map::new()),
     };

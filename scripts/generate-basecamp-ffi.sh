@@ -22,4 +22,9 @@ for f in private_multisig_client.rs private_multisig_ffi.rs; do
 done
 cp "$TMP/private_multisig.h" crates/basecamp-ffi/private_multisig.h
 
+# The generator does not emit rustfmt-formatted code, and CI runs `cargo fmt --check` over the
+# workspace. Formatting here keeps the committed files a deterministic function of the IDL — running
+# this script twice still produces identical files — without turning the check off for the crate.
+cargo fmt -p pmsig-basecamp-ffi || { echo "FATAL: rustfmt failed on the generated files" >&2; exit 1; }
+
 echo "==> regenerated crates/basecamp-ffi/src/generated/ from artifacts/multisig-idl.json"
