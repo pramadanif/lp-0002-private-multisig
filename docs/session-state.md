@@ -113,7 +113,11 @@ writes `docs/DEPLOYMENT.md` and verifies it, which closes **PF-09 and PF-10 toge
    locally but has **never run on the public testnet**, which reports only `Transaction not found in
    preconfigured amount of blocks` — the reason lives in a local sequencer's log. Needs a stable
    network; on 2026-09-07 github.com would not resolve from this machine for a while
-2. CI `e2e-sequencer` green → **P-S2**. Never yet completed; tonight's fixes are untested there
+2. ~~CI `e2e-sequencer` green → **P-S2**~~ — **done 2026-09-06**. Run 34052567273, job "e2e against a
+   real standalone LEZ sequencer": success, 3 h 41 m, on commit `c7df4cd`. Not a skip — the log
+   carries `DEMO COMPLETE`, both approvals at `RISC0_DEV_MODE=0`, `executed and confirmed`, and the
+   new INV-7 check reporting `payment: … holds 60, covering the 60 approved` and `treasury: 40 left,
+   exactly funding minus the 60 paid`. First time this job has ever passed.
 4. Basecamp `.lgx` → **P-U2**. The toolchain is installed now (cmake, ninja, Qt6, `lgx` 0.1.0), but
    the module still cannot link: **there is no FFI crate**, and the generated UI calls thirteen
    `extern "C"` functions nothing provides.
