@@ -275,6 +275,51 @@ TX_PROPOSE=$(run_ix propose -- create-proposal \
   --amount "$TRANSFER_AMOUNT" --proposer "$CREATOR")
 info "tx $TX_PROPOSE"
 
+# ─── The wallet must know the chain before it can prove against it ──────────────────────────────
+#
+# An approval is the one privacy-preserving transaction here, and it is proved against the shielded
+# pool's current root. A wallet that has never synced builds it against the state it last saw.
+#
+# On 2026-09-07 that cost a run: last_synced_block was 0 while the testnet was at 41,833. Every
+# public step succeeded — deploy, create_multisig, funding the treasury, the payee — because none of
+# them touch shielded state. The single privacy-preserving transaction was accepted by the RPC,
+# given a hash, and then never appeared in a block; after 30 blocks the wallet reported "Transaction
+# not found in preconfigured amount of blocks", which reads like a network fault. Twenty minutes of
+# real proving, thrown away.
+#
+# A local chain is wiped before every run, so block 0 *is* the head there and nothing was ever wrong.
+# That is why this only ever failed against the public testnet.
+log "syncing the wallet's shielded accounts"
+sync_before=$(python3 -c "
+import json
+try: print(json.load(open('$LEE_WALLET_HOME_DIR/storage.json')).get('last_synced_block', 0))
+except Exception: print(0)")
+"$WALLET" account sync-private > "$OUT/sync.log" 2>&1 || { tail -10 "$OUT/sync.log" >&2; die "syncing the shielded accounts failed"; }
+sync_after=$(python3 -c "
+import json
+try: print(json.load(open('$LEE_WALLET_HOME_DIR/storage.json')).get('last_synced_block', 0))
+except Exception: print(0)")
+head=$(curl -s -X POST "$RPC" -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"getLastBlockId","params":[]}' --max-time 20 | jq -r '.result // 0')
+info "wallet synced $sync_before -> $sync_after (chain head $head)"
+
+# Calling sync is not the same as having synced. A wallet still far behind the head would prove
+# against a stale root, and the failure looks like a network timeout twenty minutes later.
+# An unreadable head must not pass. Treating it as 0 would have made this gate wave through exactly
+# the state it exists to catch.
+[[ "$head" =~ ^[0-9]+$ && "$head" -gt 0 ]] \
+  || die "could not read the chain head from $RPC to check the wallet is caught up; refusing to
+       spend a twenty-minute proof against a root that might be stale"
+python3 -c "
+import sys
+after, head = int('$sync_after' or 0), int('$head')
+if head - after > 50:
+    sys.exit(1)
+" || die "the wallet is still $((head - sync_after)) blocks behind the chain head after syncing.
+       An approval proved against a stale shielded root is accepted by the RPC and then never
+       included, which surfaces ~30 blocks later as 'Transaction not found'. Re-run
+       '\$WALLET account sync-private' until it catches up before spending a proof on it."
+
 # H13/W15: the published evidence uses the FULL threshold, never a lowered tier.
 declare -a TX_APPROVE
 for i in 0 1; do
