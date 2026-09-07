@@ -155,11 +155,13 @@ if [[ ! -s docs/DEPLOYMENT.md ]]; then
 elif ! grep -qE 'https?://explorer\.' docs/DEPLOYMENT.md; then
   bad "PF-09" "DEPLOYMENT.md has no explorer URL"
 elif [[ -x scripts/check-explorer-links.sh ]]; then
-  if scripts/check-explorer-links.sh >/dev/null 2>&1; then
-    ok "PF-09" "DEPLOYMENT.md explorer links present and check-explorer-links.sh exits 0"
-  else
-    bad "PF-09" "check-explorer-links.sh exited non-zero (dead evidence link)"
-  fi
+  scripts/check-explorer-links.sh >/dev/null 2>&1; link_status=$?
+  case "$link_status" in
+    0)  ok "PF-09" "DEPLOYMENT.md explorer links present and all resolve" ;;
+    # On chain, but a reviewer clicking the link still sees an empty page. Neither green nor broken.
+    75) pend "PF-09" "explorer links are on chain but not yet indexed — re-run check-explorer-links.sh before opening the PR" ;;
+    *)  bad "PF-09" "check-explorer-links.sh exited $link_status (dead evidence link)" ;;
+  esac
 else
   pend "PF-09" "scripts/check-explorer-links.sh not executable yet (Phase G)"
 fi

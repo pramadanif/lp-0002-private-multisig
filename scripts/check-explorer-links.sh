@@ -97,6 +97,8 @@ if (( pending )); then
   echo "$((${#urls[@]} - pending)) of ${#urls[@]} evidence URLs resolve; $pending are on chain but not yet"
   echo "indexed by the explorer. Re-run this before opening the PR — the links must render for a"
   echo "reviewer, and a submission is not finished while any of them still says WAIT."
-else
-  echo "All ${#urls[@]} evidence URLs resolve."
+  # Not a pass and not a failure. Exiting 0 here would let preflight report PF-09 green while a
+  # reviewer clicking the link still sees an empty page.
+  exit 75
 fi
+echo "All ${#urls[@]} evidence URLs resolve."
