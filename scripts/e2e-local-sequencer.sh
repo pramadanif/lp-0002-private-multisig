@@ -67,6 +67,20 @@ with_timeout() { # seconds, then command...
 # this one refused a run twice.
 free_gb() {
   if [[ "$(uname)" == "Darwin" ]]; then
+    # `memory_pressure` is the signal macOS itself uses for "is memory tight", and it counts the
+    # clean file-backed pages the kernel evicts the instant anything needs them. The older reading
+    # here — free + inactive + speculative — leaves those out, and on this machine that is 8.7 GB of
+    # 16: it reported 6.8 GB free while the system reported 85%, with 1.9 GB actually wired. It has
+    # now raised a false alarm twice, once at 9 GB and once at 7, each time refusing a machine that
+    # had room. A gate that stops a working run is not caution.
+    local pct total
+    pct=$(memory_pressure 2>/dev/null | awk '/System-wide memory free percentage/ {gsub(/%/,""); print $NF}')
+    total=$(sysctl -n hw.memsize 2>/dev/null)
+    if [[ "$pct" =~ ^[0-9]+$ && "$total" =~ ^[0-9]+$ ]]; then
+      awk -v p="$pct" -v t="$total" 'BEGIN {printf "%.1f", (p/100) * t / 1073741824}'
+      return
+    fi
+    # Fallback: the old reading, which under-reports rather than over-reports, so it fails safe.
     vm_stat 2>/dev/null | awk '
       /page size of/ {ps=$8}
       /Pages free/        {gsub(/\./,"",$3); f=$3}
