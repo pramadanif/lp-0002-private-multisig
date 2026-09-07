@@ -54,3 +54,41 @@ fifty minutes — to learn one rule. Reading this module takes minutes.
 transcribes the rules that can be checked without the `lee` crate, which lives in an uncommitted
 local checkout and so cannot be a dependency. It catches two of the four in 0.1 seconds; it is
 mutation-tested against both.
+
+## The rule that only exists on a public chain
+
+Everything above is checked by the sequencer against the transaction. This one is not a rule about
+the transaction at all — it is about the wallet that built it.
+
+A privacy-preserving transaction is proved against the **current root of the shielded pool**. The
+wallet holds `last_synced_block` in its `storage.json`, and `wallet account sync-private` is what
+advances it. Nothing calls that command for you.
+
+On a standalone sequencer this can never be wrong: `scripts/e2e-local-sequencer.sh` wipes the chain
+before every run, so an unsynced wallet at block 0 is looking at the head. On a public testnet with
+41,833 blocks behind it, a wallet at block 0 proves against a root the chain abandoned long ago.
+
+**What that looks like from outside**, which is why it took a run to find:
+
+- every *public* transaction succeeds — deploying programs, `create_multisig`, funding the treasury,
+  creating and initialising the payee. None of them touch shielded state.
+- the *one* privacy-preserving transaction is accepted by the RPC and given a `tx_hash`. Nothing
+  reports an error.
+- it is never included in a block. Thirty blocks later the wallet says **"Transaction not found in
+  preconfigured amount of blocks"**, which reads like a network fault.
+- twenty minutes of real proving is gone, and the failure names nothing that is actually wrong.
+
+The shape of it is the diagnosis: *all public steps pass and only the private one fails.* Nothing
+else on this list produces that pattern.
+
+Ruled out along the way, none of them the cause: the testnet's `privacy_preserving_circuit`
+ProgramId (identical to v0.2.4, checked the same day), an address collision (both PDAs were empty
+before the run), the 1 MiB block limit (the transaction is ~364 KB over JSON-RPC, and the local
+sequencer enforces the same limit and had accepted the same shape without one deferral), unfunded
+shielded accounts (the successful local wallet's are 0 too), and a malformed transaction (CI runs
+the whole lifecycle on the same reproducible binaries).
+
+`scripts/deploy-testnet.sh` now syncs before the approvals and checks the sync worked — calling
+`sync-private` is not the same as having synced, and a wallet still far behind fails identically
+twenty minutes later. An unreadable chain head fails too, rather than passing as zero: the first
+version of that gate would have waved through exactly the state it exists to catch.
