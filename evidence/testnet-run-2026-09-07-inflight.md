@@ -10,7 +10,8 @@ sebelum memutuskan mengulang — mengulang berarti membuang proof 20 menit.
 | deploy membership | fe3a65ee4127a821847514d0350df479c86cb9b6d14c399c5608b36dde333fdc | blok 38661 |
 | deploy multisig | ef9029b2a9d4ef8c261e02af21b9a099ceba510a58a05407ff4a60714bb08d4e | blok 40565 |
 | create_multisig | dc67a3cfa3f8b340c22adaab6e40996165a99297ac8673e151273a97aaf783b7 | terkonfirmasi |
-| payee init | 525ac76c7c991a06a036ebaf0062d4eac2451c2cad9d7e430e9230a4214634ea | terkonfirmasi |
+| payee | `Public/Ux5NLEykBcbETi6CfHCccjsXgcE5DCjkXG42RafiP9R` | dibuat dan di-init |
+| create_proposal | 525ac76c7c991a06a036ebaf0062d4eac2451c2cad9d7e430e9230a4214634ea | terkonfirmasi |
 | approve 1 | 1770532fc48259ede1c532dcb14b63e6cb1fc98c19f9abec0e1c803c9f6a91b8 | privacy-preserving, TIDAK terkonfirmasi dalam 30 blok |
 
 ## Keadaan on chain setelah run berhenti
