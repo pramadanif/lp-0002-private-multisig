@@ -92,3 +92,60 @@ the whole lifecycle on the same reproducible binaries).
 `sync-private` is not the same as having synced, and a wallet still far behind fails identically
 twenty minutes later. An unreadable chain head fails too, rather than passing as zero: the first
 version of that gate would have waved through exactly the state it exists to catch.
+
+## The nonce that locks an account out of every program
+
+Rules 3, 4 and 7 close on each other, and a shielded account walks into the gap on its own.
+
+- **3.** the nonce may not change
+- **4.** `program_owner` may not change
+- **7.** a post-state with the default `program_owner` requires the pre-state to have been *wholly*
+  default
+
+A shielded account is created with `nonce: 0` — wholly default, so rule 7 is satisfied and any
+program may echo it back. `wallet account sync-private` then gives it a random nonce. From that
+moment the account is no longer default, its owner is still nobody, and neither can be changed. **No
+program can return it at all**, and `auth-transfer init` refuses it too:
+
+```
+Guest panicked: Account must be uninitialized
+```
+
+That is `initialize_account` in LEZ's own `authenticated_transfer`, which asserts
+`account == Account::default()` before claiming. An account is claimable only while it is untouched.
+
+### Why this never appeared locally
+
+`scripts/e2e-local-sequencer.sh` wipes the chain before every run and never syncs — nothing needs
+it, because block 0 *is* the head. The approvers therefore keep `nonce: 0` forever, stay wholly
+default, and rule 7 cannot fire. Every local run and every CI run has been passing under that
+condition. It is not a weaker version of the public testnet; it is a different case.
+
+### The two faces of the same trap
+
+Both testnet attempts failed, differently, for this one reason:
+
+| wallet | nonce | rule 7 | shielded root | outcome |
+|--------|-------|--------|---------------|---------|
+| unsynced | 0 | passes | stale by 41,833 blocks | accepted by the RPC, never included; "Transaction not found in preconfigured amount of blocks" after 30 blocks |
+| synced | random | **fails** | current | `NonDefaultAccountWithDefaultOwner`, four minutes into proving |
+
+Syncing was the right fix for the first failure and it exposed the second. Neither error names the
+nonce.
+
+### What actually works
+
+Claim the account **before it is ever synced**, while it is still wholly default:
+
+```bash
+wallet account new private                       # nonce 0
+wallet auth-transfer init --account-id Private/<id>   # ~5 min: claiming a shielded account is
+                                                      # itself a privacy-preserving transaction
+```
+
+After that its `program_owner` is not default, so rule 7 can never fire for it again, whatever the
+nonce becomes. Confirmed on the testnet: `F3eR1g8x…` went from `owner_default=true` to
+`owner_default=false`, block 42984, while the two accounts that had already been synced stayed
+locked out — bearing a nonce, owned by nobody, refused by `init`.
+
+**So the order is load-bearing: create, claim, then sync.** Sync first and the account is finished.
