@@ -31,6 +31,7 @@ class PrivateMultisigBackend : public QObject {
     Q_PROPERTY(QString walletPath   READ walletPath   WRITE setWalletPath   NOTIFY walletPathChanged)
     Q_PROPERTY(QString sequencerUrl READ sequencerUrl WRITE setSequencerUrl NOTIFY sequencerUrlChanged)
     Q_PROPERTY(QString programIdHex READ programIdHex WRITE setProgramIdHex NOTIFY programIdHexChanged)
+    Q_PROPERTY(QString walletCliDir READ walletCliDir WRITE setWalletCliDir NOTIFY walletCliDirChanged)
 
     // ── Wallet state ─────────────────────────────────────────────────────
     Q_PROPERTY(QString     connectionStatus  READ connectionStatus  NOTIFY connectionStatusChanged)
@@ -58,9 +59,11 @@ public:
     QString walletPath()   const { return m_walletPath; }
     QString sequencerUrl() const { return m_sequencerUrl; }
     QString programIdHex() const { return m_programIdHex; }
+    QString walletCliDir() const { return m_walletCliDir; }
     Q_INVOKABLE void setWalletPath(const QString& v);
     Q_INVOKABLE void setSequencerUrl(const QString& v);
     Q_INVOKABLE void setProgramIdHex(const QString& v);
+    Q_INVOKABLE void setWalletCliDir(const QString& v);
 
     // ── Instructions ──────────────────────────────────────────────────────
     Q_INVOKABLE void createMultisig(const QString& creatorId, const QString& configHash, const QString& memberRoot, quint32 m, quint32 n, const QString& multisigId, const QVariantList& membershipProgramId);
@@ -93,6 +96,7 @@ signals:
     void walletPathChanged();
     void sequencerUrlChanged();
     void programIdHexChanged();
+    void walletCliDirChanged();
     void connectionStatusChanged();
     void walletAccountsChanged();
     void walletAccountInfoChanged();
@@ -106,11 +110,13 @@ private:
     QString     callFfi(FfiFn fn, const QJsonObject& args);
     void        applyFetched(const QString& what, const QString& result, QVariantMap& target,
                              void (PrivateMultisigBackend::*changed)());
+    void        applyWalletCliDir();
     QJsonObject baseArgs() const;
 
     QString m_walletPath;
     QString m_sequencerUrl;
     QString m_programIdHex;
+    QString m_walletCliDir;
 
     QVariantMap m_config;
     QVariantMap m_proposal;

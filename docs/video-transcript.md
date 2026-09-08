@@ -147,12 +147,23 @@ A CLI-only video was rejected for this prize. This section is not optional.
    `docs/basecamp-load.md` so anyone can check what they downloaded.
 2. **Applications → Blockchain.** The module appears there with its icon, the same way a catalog app
    does. Open it.
-3. **Do something in the UI on camera.** Even reading a config or a proposal back from the chain is
-   enough — what the reviewer needs to see is the module working, not a screenshot of it installed.
+3. **Settings first, on camera.** Paste the sequencer URL and the program id from
+   [DEPLOYMENT.md](DEPLOYMENT.md) and a wallet path. A fresh install points at `127.0.0.1:3040` with
+   no program id, so this is a real step, not setup to hide — and it takes fifteen seconds.
+4. **Config → paste the `config_hash` → press ↻.** The panel fills with the deployed multisig:
+   `m 2`, `n 3`, the member root, the membership program id. Then **Proposal → the
+   `proposal_seed` → ↻**: two nullifiers, `executed true`, and the recipient and amount. Say what is
+   *not* there — no member identity, only a count and nullifiers. That is P-F2 on screen.
+5. Optional, if the wallet CLI directory is set: **Wallet → the accounts list**, read out of the
+   same wallet the CLI uses.
+
+Do not skip step 4. A reviewer who sees only the installed row learns nothing; what is being shown
+is the module reading the same chain state `verify-onchain.sh` reads.
 
 **Say:** "The module is generated from the same IDL the CLI uses, and the C ABI behind it is
 generated too — thirteen functions, and the build refuses to package unless every one of them is
-actually exported. Nothing here is a mock."
+actually exported. Nothing here is a mock: these values come from the testnet accounts the
+verifier reads."
 
 **Honesty on camera:** say plainly that the package carries the `darwin-arm64` variant only, built
 on this machine. That is in `limitations.md` and saying it costs nothing.

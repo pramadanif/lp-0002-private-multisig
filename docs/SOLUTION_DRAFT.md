@@ -106,8 +106,8 @@ as evidence anywhere.
 | | |
 |-|-|
 | Basecamp module | [`app/private_multisig.lgx`](../app/private_multisig.lgx) |
-| Size | 2,627,632 bytes |
-| sha256 | `f329e0d0fa3c15423515fbb787efe102002074733bd2d505de289e146d69c0c2` |
+| Size | 2,630,161 bytes |
+| sha256 | `731150ae7fa7a837de96ab08394f671cf975241edd7e8f15bc6847c0a813a672` |
 | Variant | `darwin-arm64` (built on the machine that produced it — [limitations](limitations.md)) |
 | Install steps | [basecamp-load.md](basecamp-load.md) |
 
@@ -154,7 +154,7 @@ test:
   build machine have to be rewritten. See [basecamp-load.md](basecamp-load.md).
 
 - **The Basecamp module loads, and its panels read the chain.** `app/private_multisig.lgx` —
-  2,627,632 bytes, sha256 `f329e0d0…6d69c0c2` — installs in Logos Basecamp 0.2.3 and opens from
+  2,630,161 bytes, sha256 `731150ae…a813a672` — installs in Logos Basecamp 0.2.3 and opens from
   Applications → Blockchain. Getting the panels to *do* anything took one more undocumented fact:
   a `ui_qml` module's QML runs in Basecamp's main process while its plugin runs in a `ui-host`
   child, so the context property the scaffold set on its own engine was never in scope. Every

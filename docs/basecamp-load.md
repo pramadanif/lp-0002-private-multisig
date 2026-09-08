@@ -1,6 +1,6 @@
 # Loading the module in Logos Basecamp
 
-`app/private_multisig.lgx` — 2627632 bytes, sha256 `f329e0d0fa3c15423515fbb787efe102002074733bd2d505de289e146d69c0c2`, variant **darwin-arm64**.
+`app/private_multisig.lgx` — 2630161 bytes, sha256 `731150ae7fa7a837de96ab08394f671cf975241edd7e8f15bc6847c0a813a672`, variant **darwin-arm64**.
 
 Verify what you downloaded before installing it:
 
@@ -36,9 +36,16 @@ panels:
 | Sequencer URL | `https://testnet.lez.logos.co` |
 | Program ID (hex) | `79cf1dbaffe6295ce97af319e139220380d3da8ed4a877a12fd35cedc4a60468` |
 | Wallet Path | a wallet directory you control, e.g. `.e2e/wallet-testnet` |
+| Wallet CLI directory | the directory holding LEZ's `wallet` binary, e.g. `<lez checkout>/target/release` |
 
-Until they are set the module points at `http://127.0.0.1:3040` with no program id, and a fetch
-finds nothing. It now says so — the panel names the sequencer and program id it used — rather than
+The last one is only needed for the **Wallet** pages. They do not talk to the chain through the C
+ABI's client — they run LEZ's `wallet` binary, which is resolved through `PATH`, and Basecamp starts
+its module hosts with the desktop session's `PATH`, which has no LEZ build tree in it. Without the
+setting those pages failed with a bare `No such file or directory (os error 2)`; they now say which
+binary is missing and which setting fixes it.
+
+Until the first three are set the module points at `http://127.0.0.1:3040` with no program id, and a
+fetch finds nothing. It now says so — the panel names the sequencer and program id it used — rather than
 leaving the "No data" placeholder up, which is indistinguishable from an account that is genuinely
 empty.
 

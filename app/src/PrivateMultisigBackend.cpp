@@ -35,6 +35,12 @@ PrivateMultisigBackend::PrivateMultisigBackend(LogosAPI* /*api*/, QObject* paren
     m_walletPath   = s.value("walletPath",   qEnvironmentVariable("LEE_WALLET_HOME_DIR",  ".scaffold/wallet")).toString();
     m_sequencerUrl = s.value("sequencerUrl", qEnvironmentVariable("NSSA_SEQUENCER_URL",   "http://127.0.0.1:3040")).toString();
     m_programIdHex = s.value("programIdHex", qEnvironmentVariable("PRIVATE_MULTISIG_PROGRAM_ID")).toString();
+    // The wallet pages shell out to LEZ's `wallet` binary, which the C ABI resolves through PATH.
+    // Basecamp starts its module hosts with the desktop session's PATH, which does not include a
+    // LEZ build tree, so those pages failed with "No such file or directory (os error 2)" and no
+    // hint of what was missing. This is the directory that holds it.
+    m_walletCliDir = s.value("walletCliDir", qEnvironmentVariable("PMSIG_WALLET_CLI_DIR")).toString();
+    applyWalletCliDir();
     if (m_programIdHex.isEmpty()) {
         char* raw = private_multisig_program_id();
         if (raw) {
@@ -51,6 +57,41 @@ PrivateMultisigBackend::PrivateMultisigBackend(LogosAPI* /*api*/, QObject* paren
 PrivateMultisigBackend::~PrivateMultisigBackend() = default;
 
 // ── Configuration ────────────────────────────────────────────────────────
+
+// Puts the configured directory at the front of this process's PATH, so the C ABI's
+// `Command::new("wallet")` finds the binary the operator pointed at rather than whatever the
+// desktop session happens to have. Prepending, not replacing: the rest of PATH still works.
+// "wallet CLI: No such file or directory (os error 2)" names neither the binary nor the setting
+// that would fix it. Every wallet page fails this way on a machine that has not built LEZ, which is
+// every machine Basecamp runs on by default.
+static QString explain(const QString& error) {
+    if (error.contains(QLatin1String("wallet CLI:"))
+        && error.contains(QLatin1String("No such file"))) {
+        return QStringLiteral(
+            "%1 — the wallet pages run LEZ's `wallet` binary, and it is not on this process's PATH. "
+            "Set \"Wallet CLI directory\" in Settings to the directory holding it (a LEZ checkout's "
+            "target/release), or start Basecamp from a shell where `wallet` is on PATH.")
+            .arg(error);
+    }
+    return error;
+}
+
+void PrivateMultisigBackend::applyWalletCliDir() {
+    if (m_walletCliDir.isEmpty()) return;
+    const QByteArray current = qgetenv("PATH");
+    const QByteArray wanted  = m_walletCliDir.toLocal8Bit();
+    if (current.split(':').contains(wanted)) return;
+    qputenv("PATH", wanted + ':' + current);
+}
+
+void PrivateMultisigBackend::setWalletCliDir(const QString& v) {
+    if (m_walletCliDir == v) return;
+    m_walletCliDir = v;
+    QSettings("logos-co", "private_multisig").setValue("walletCliDir", v);
+    applyWalletCliDir();
+    emit walletCliDirChanged();
+    if (!m_walletPath.isEmpty()) listAccounts();
+}
 
 void PrivateMultisigBackend::setWalletPath(const QString& v) {
     if (m_walletPath == v) return;
@@ -122,7 +163,7 @@ void PrivateMultisigBackend::handleFfiResult(const QString& operation, const QSt
     QJsonObject obj = QJsonDocument::fromJson(result.toUtf8()).object();
 
     if (!obj.value("success").toBool()) {
-        m_lastError = obj.value("error").toString(result);
+        m_lastError = explain(obj.value("error").toString(result));
         emit lastErrorChanged();
         emit operationError(operation, m_lastError);
         return;
@@ -221,7 +262,7 @@ void PrivateMultisigBackend::applyFetched(const QString& what,
                                           void (PrivateMultisigBackend::*changed)()) {
     const QJsonObject obj = QJsonDocument::fromJson(result.toUtf8()).object();
     if (!obj.value("success").toBool()) {
-        m_lastError = obj.value("error").toString(result);
+        m_lastError = explain(obj.value("error").toString(result));
         emit lastErrorChanged();
         emit operationError("fetch_" + what, m_lastError);
         return;
@@ -306,7 +347,7 @@ void PrivateMultisigBackend::listAccounts() {
                 m_walletAccounts = list;
                 emit walletAccountsChanged();
             } else {
-                m_lastError = obj.value("error").toString(result);
+                m_lastError = explain(obj.value("error").toString(result));
                 emit lastErrorChanged();
             }
         }, Qt::QueuedConnection);
@@ -325,7 +366,7 @@ void PrivateMultisigBackend::createAccount(const QString& label) {
                 emit operationSuccess("create_account", newId);
                 listAccounts();
             } else {
-                m_lastError = obj.value("error").toString(result);
+                m_lastError = explain(obj.value("error").toString(result));
                 emit lastErrorChanged();
                 emit operationError("create_account", m_lastError);
             }

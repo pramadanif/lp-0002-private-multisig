@@ -2607,6 +2607,26 @@ It never leaves this machine except inside a proof, is never saved to disk, and 
                             }
                         }
 
+                        Text {
+                            text: "Wallet CLI directory"
+                            color: root.colMuted; font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
+                        // The wallet pages run LEZ's `wallet` binary. Basecamp starts its module
+                        // hosts with the desktop session's PATH, which has no LEZ build tree in it,
+                        // so without this they fail with a bare "No such file or directory".
+                        TextField {
+                            text: backend.walletCliDir
+                            onEditingFinished: backend.setWalletCliDir(text)
+                            placeholderText: "e.g. /path/to/lez/target/release"
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 24; Layout.rightMargin: 24
+                            color: root.colText; placeholderTextColor: root.colMuted
+                            background: Rectangle {
+                                color: root.colSurface; border.color: root.colBorder; radius: root.radius / 2
+                            }
+                        }
+
                         Item { Layout.fillWidth: true; height: 80 }
                     }
                 }

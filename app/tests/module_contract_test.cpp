@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
     qInfo().noquote() << "plugin class:" << mo->className();
 
     for (const char* p : {"config", "proposal", "busy", "lastError", "lastTxHash", "lastResult",
-                          "walletPath", "sequencerUrl", "programIdHex", "connectionStatus",
+                          "walletPath", "sequencerUrl", "programIdHex", "walletCliDir", "connectionStatus",
                           "walletAccounts", "walletAccountInfo", "walletDecodedAccount"}) {
         check(hasProperty(mo, p), QStringLiteral("property %1 is published and notifies").arg(p));
     }
@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
                           "createAccount(QString)", "inspectAccount(QString)",
                           "decodeAccount(QString)", "saveHistory(QString,QString)",
                           "setWalletPath(QString)", "setSequencerUrl(QString)",
-                          "setProgramIdHex(QString)"}) {
+                          "setProgramIdHex(QString)", "setWalletCliDir(QString)"}) {
         check(hasSlot(mo, s), QStringLiteral("%1 is a public slot").arg(QString::fromLatin1(s)));
     }
 
@@ -181,6 +181,8 @@ int main(int argc, char** argv) {
                                   Q_ARG(QString, qEnvironmentVariable("PMSIG_PROGRAM_ID")));
         QMetaObject::invokeMethod(plugin, "setWalletPath",
                                   Q_ARG(QString, qEnvironmentVariable("PMSIG_WALLET_PATH")));
+        QMetaObject::invokeMethod(plugin, "setWalletCliDir",
+                                  Q_ARG(QString, qEnvironmentVariable("PMSIG_WALLET_CLI_DIR")));
         QMetaObject::invokeMethod(plugin, "fetchConfig", Q_ARG(QString, hash));
 
         QElapsedTimer clock;
@@ -201,6 +203,24 @@ int main(int argc, char** argv) {
         } else {
             qInfo().noquote() << "        lastError:" << plugin->property("lastError").toString();
         }
+
+        // The wallet pages do not talk to the chain over the FFI's client — they run LEZ's `wallet`
+        // binary, which is resolved through PATH and so is the one part of the module that a host
+        // with a different environment breaks silently.
+        QMetaObject::invokeMethod(plugin, "listAccounts");
+        clock.restart();
+        QVariantList accounts;
+        while (clock.elapsed() < 60000) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+            accounts = plugin->property("walletAccounts").toList();
+            if (!accounts.isEmpty()) break;
+        }
+        check(!accounts.isEmpty(),
+              QStringLiteral("listAccounts read the wallet through the configured CLI directory"));
+        if (accounts.isEmpty())
+            qInfo().noquote() << "        lastError:" << plugin->property("lastError").toString();
+        else
+            qInfo().noquote() << "        accounts:" << accounts.size();
     }
 
     // Tear the tree down while its context is still alive, so the run ends quietly.

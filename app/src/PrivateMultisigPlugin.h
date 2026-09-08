@@ -56,6 +56,7 @@ class PrivateMultisigPlugin : public QObject, public IComponent {
 	Q_PROPERTY(QString walletPath   READ walletPath   WRITE setWalletPath   NOTIFY walletPathChanged)
 	Q_PROPERTY(QString sequencerUrl READ sequencerUrl WRITE setSequencerUrl NOTIFY sequencerUrlChanged)
 	Q_PROPERTY(QString programIdHex READ programIdHex WRITE setProgramIdHex NOTIFY programIdHexChanged)
+	Q_PROPERTY(QString walletCliDir READ walletCliDir WRITE setWalletCliDir NOTIFY walletCliDirChanged)
 
 	// ── Wallet state ─────────────────────────────────────────────────────
 	Q_PROPERTY(QString      connectionStatus     READ connectionStatus     NOTIFY connectionStatusChanged)
@@ -81,6 +82,7 @@ public:
 	QString      walletPath() const;
 	QString      sequencerUrl() const;
 	QString      programIdHex() const;
+	QString      walletCliDir() const;
 	QString      connectionStatus() const;
 	QVariantList walletAccounts() const;
 	QVariantMap  walletAccountInfo() const;
@@ -90,6 +92,7 @@ public slots:
 	void setWalletPath(const QString& v);
 	void setSequencerUrl(const QString& v);
 	void setProgramIdHex(const QString& v);
+	void setWalletCliDir(const QString& v);
 
 	void createMultisig(const QString& creatorId, const QString& configHash, const QString& memberRoot, quint32 m, quint32 n, const QString& multisigId, const QVariantList& membershipProgramId);
 	void createProposal(const QString& proposerId, const QString& configHash, const QString& proposalSeed, const QString& proposalId, const QString& recipient, const QString& amount);
@@ -119,6 +122,7 @@ signals:
 	void walletPathChanged();
 	void sequencerUrlChanged();
 	void programIdHexChanged();
+	void walletCliDirChanged();
 	void connectionStatusChanged();
 	void walletAccountsChanged();
 	void walletAccountInfoChanged();

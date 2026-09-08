@@ -36,6 +36,7 @@ PrivateMultisigBackend* PrivateMultisigPlugin::backend() const {
 	connect(m_backend, &B::walletPathChanged,           self, &P::walletPathChanged);
 	connect(m_backend, &B::sequencerUrlChanged,         self, &P::sequencerUrlChanged);
 	connect(m_backend, &B::programIdHexChanged,         self, &P::programIdHexChanged);
+	connect(m_backend, &B::walletCliDirChanged,         self, &P::walletCliDirChanged);
 	connect(m_backend, &B::connectionStatusChanged,     self, &P::connectionStatusChanged);
 	connect(m_backend, &B::walletAccountsChanged,       self, &P::walletAccountsChanged);
 	connect(m_backend, &B::walletAccountInfoChanged,    self, &P::walletAccountInfoChanged);
@@ -81,6 +82,7 @@ QVariantMap  PrivateMultisigPlugin::lastResult() const { return backend()->lastR
 QString      PrivateMultisigPlugin::walletPath() const { return backend()->walletPath(); }
 QString      PrivateMultisigPlugin::sequencerUrl() const { return backend()->sequencerUrl(); }
 QString      PrivateMultisigPlugin::programIdHex() const { return backend()->programIdHex(); }
+QString      PrivateMultisigPlugin::walletCliDir() const { return backend()->walletCliDir(); }
 QString      PrivateMultisigPlugin::connectionStatus() const { return backend()->connectionStatus(); }
 QVariantList PrivateMultisigPlugin::walletAccounts() const { return backend()->walletAccounts(); }
 QVariantMap  PrivateMultisigPlugin::walletAccountInfo() const { return backend()->walletAccountInfo(); }
@@ -91,6 +93,7 @@ QVariantMap  PrivateMultisigPlugin::walletDecodedAccount() const { return backen
 void PrivateMultisigPlugin::setWalletPath(const QString& v) { backend()->setWalletPath(v); }
 void PrivateMultisigPlugin::setSequencerUrl(const QString& v) { backend()->setSequencerUrl(v); }
 void PrivateMultisigPlugin::setProgramIdHex(const QString& v) { backend()->setProgramIdHex(v); }
+void PrivateMultisigPlugin::setWalletCliDir(const QString& v) { backend()->setWalletCliDir(v); }
 
 void PrivateMultisigPlugin::createMultisig(const QString& creatorId, const QString& configHash, const QString& memberRoot, quint32 m, quint32 n, const QString& multisigId, const QVariantList& membershipProgramId) {
 	backend()->createMultisig(creatorId, configHash, memberRoot, m, n, multisigId, membershipProgramId);
