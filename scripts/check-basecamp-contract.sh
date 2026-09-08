@@ -27,6 +27,15 @@ case "$(uname)" in
   *)      echo "FATAL: unsupported platform $(uname)" >&2; exit 1 ;;
 esac
 
+# The plugin links the FFI library, so it has to exist before CMake configures — not after.
+if [[ ! -f "app/lib/libpmsig_ffi.$LIBEXT" ]]; then
+  echo "==> building the FFI library the plugin links against"
+  command -v cargo >/dev/null 2>&1 || { echo "FATAL: cargo not found. Install Rust: https://rustup.rs" >&2; exit 1; }
+  cargo build --release -p pmsig-basecamp-ffi
+  mkdir -p app/lib
+  cp "target/release/libpmsig_ffi.$LIBEXT" "app/lib/"
+fi
+
 echo "==> building the contract test"
 cmake -S app -B app/build -DCMAKE_PREFIX_PATH="$QT_DIR" >/dev/null
 cmake --build app/build --target PrivateMultisigContractTest PrivateMultisigPlugin >/dev/null
@@ -36,16 +45,8 @@ cmake --build app/build --target PrivateMultisigContractTest PrivateMultisigPlug
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 cp "app/build/libprivate_multisig_plugin.$LIBEXT" "$STAGE/private_multisig_plugin.$LIBEXT"
-# The plugin resolves the FFI library by @loader_path/$ORIGIN, so it has to sit beside it. Build it
-# here when build-basecamp.sh has not already staged one, so this check stands on its own in CI.
-if [[ -f "app/lib/libpmsig_ffi.$LIBEXT" ]]; then
-  cp "app/lib/libpmsig_ffi.$LIBEXT" "$STAGE/"
-else
-  echo "==> building the FFI library the plugin loads"
-  command -v cargo >/dev/null 2>&1 || { echo "FATAL: cargo not found. Install Rust: https://rustup.rs" >&2; exit 1; }
-  cargo build --release -p pmsig-basecamp-ffi >/dev/null
-  cp "target/release/libpmsig_ffi.$LIBEXT" "$STAGE/"
-fi
+# The plugin resolves the FFI library relative to itself, so it has to sit beside it.
+cp "app/lib/libpmsig_ffi.$LIBEXT" "$STAGE/"
 
 echo "==> checking the module contract"
 QT_QPA_PLATFORM=offscreen ./app/build/PrivateMultisigContractTest \

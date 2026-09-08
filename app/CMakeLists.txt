@@ -9,10 +9,17 @@ set(CMAKE_AUTOMOC ON)
 # framework the host lacks cannot be loaded — the module installs and never appears.
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickWidgets)
 
-# ── FFI shared library (built by `make ffi`) ──────────────────────────────────
+# ── FFI shared library (built by build-basecamp.sh / check-basecamp-contract.sh) ──────────────
+# The extension is not hardcoded: the same tree is configured on Linux by CI, where naming a .dylib
+# fails to link with an error that says nothing about the platform.
+if(APPLE)
+    set(PMSIG_FFI_SUFFIX "dylib")
+else()
+    set(PMSIG_FFI_SUFFIX "so")
+endif()
 add_library(private_multisig_ffi SHARED IMPORTED)
 set_target_properties(private_multisig_ffi PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/lib/libpmsig_ffi.dylib"
+    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/lib/libpmsig_ffi.${PMSIG_FFI_SUFFIX}"
 )
 
 # ── Plugin (loaded by Basecamp) ────────────────────────────────────────────

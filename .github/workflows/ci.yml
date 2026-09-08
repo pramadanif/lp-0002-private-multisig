@@ -249,12 +249,17 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
+          # Quick Controls ships inside qtdeclarative from Qt 6 on; naming it as a module fails
+          # with "packages ['qtquickcontrols2'] were not found while parsing XML".
           version: 6.9.2
-          modules: qtquickcontrols2
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - name: Install libpcsclite (the wallet links pcsc-sys)
-        run: sudo apt-get update && sudo apt-get install -y libpcsclite-dev
+      # libpcsclite: the wallet links pcsc-sys. The rest is what a Qt GUI binary needs to start
+      # under the offscreen platform on a bare runner.
+      - name: Install the module's build and run dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpcsclite-dev libgl1 libegl1 libxkbcommon0 libfontconfig1
       - name: check-basecamp-contract.sh
         run: PMSIG_QT_DIR="$QT_ROOT_DIR" ./scripts/check-basecamp-contract.sh
 
