@@ -1,6 +1,6 @@
 # Loading the module in Logos Basecamp
 
-`app/private_multisig.lgx` — 2637016 bytes, sha256 `a5273e76ad1a00c5e5a0554eaedf76cd23b7f57f50f07036b75db9feb0539d3e`, variant **darwin-arm64**.
+`app/private_multisig.lgx` — 2627632 bytes, sha256 `f329e0d0fa3c15423515fbb787efe102002074733bd2d505de289e146d69c0c2`, variant **darwin-arm64**.
 
 Verify what you downloaded before installing it:
 
@@ -25,6 +25,57 @@ Installed files land in:
 ```
 ~/Library/Application Support/Logos/LogosBasecamp/plugins/private_multisig/
 ```
+
+## Before the first fetch: Settings
+
+A freshly installed module points at nothing. Open **Settings** and fill in all three, then use the
+panels:
+
+| Field | Value for the deployment in [DEPLOYMENT.md](DEPLOYMENT.md) |
+|-------|------------------------------------------------------------|
+| Sequencer URL | `https://testnet.lez.logos.co` |
+| Program ID (hex) | `79cf1dbaffe6295ce97af319e139220380d3da8ed4a877a12fd35cedc4a60468` |
+| Wallet Path | a wallet directory you control, e.g. `.e2e/wallet-testnet` |
+
+Until they are set the module points at `http://127.0.0.1:3040` with no program id, and a fetch
+finds nothing. It now says so — the panel names the sequencer and program id it used — rather than
+leaving the "No data" placeholder up, which is indistinguishable from an account that is genuinely
+empty.
+
+Then, on **Config**, paste the `config_hash` and press ↻; on **Proposal**, the `proposal_seed`.
+
+## Why the panels rendered and did nothing
+
+The module shipped for a day looking complete and doing nothing: every panel drew, and no button
+had any effect. The cause is the part of Basecamp's module contract that is not written down.
+
+A `ui_qml` module is loaded **twice over**. The plugin dylib goes into a `ui-host` child process,
+which calls `initLogos` and then publishes the plugin object over QtRemoteObjects under the module's
+name. The QML named by the manifest's `view` is loaded by the **main** Basecamp process, in an
+engine the plugin never touches. So the `backend` context property the scaffold set on its own
+`QQuickWidget` engine was never in scope where the QML actually ran:
+
+```
+file:///…/plugins/private_multisig/qml/Main.qml:297: ReferenceError: backend is not defined
+```
+
+Line 297 is the fetch button. Basecamp logs this as a *warning* and carries on rendering, so the
+window looks finished. Nothing in the build catches it, because everything builds and the standalone
+preview app — which does set that context property — works perfectly.
+
+Basecamp's own `package_manager_ui` shows the contract: its QML reaches C++ as
+`logos.module("package_manager_ui")`, and the properties and slots it reads live on the **plugin**
+class. So:
+
+- `PrivateMultisigPlugin` now carries the whole API and forwards to the backend. The methods are
+  public **slots**, because QtRemoteObjects replicates properties, signals and public slots — a
+  `Q_INVOKABLE` that is not a slot would not be callable from the replica.
+- `Main.qml` resolves its backend from either host: the `ctxBackend` context property when it is
+  loaded in-process, otherwise `logos.module("private_multisig")`. One file, both hosts.
+
+`./scripts/check-basecamp-contract.sh` asserts both halves, and CI runs it. Reverting `Main.qml` to
+the context-property form makes it fail with 47 unresolved bindings — the same count the Basecamp
+log showed.
 
 ## Why `lgx` cannot build this package
 
@@ -104,9 +155,19 @@ It builds the C ABI library the UI calls, checks that **every** `extern "C"` sym
 then packages. A missing symbol fails the build rather than producing a package that installs and
 then cannot call the program.
 
-## What is not claimed
+## What is and is not claimed
 
-The package is built, verified structurally, and installs. **It has not been shown running its UI
-against a chain**, and it carries only the `darwin-arm64` variant — the platform it was built on.
-Both are recorded in [limitations.md](limitations.md) and against P-U2 in
+The package is built, verified structurally, installs, and its panels are wired to the chain: the
+contract check fetches the deployed config through the plugin's own slots and decodes it to the
+2-of-3 in [DEPLOYMENT.md](DEPLOYMENT.md), which is the whole path a press of ↻ takes.
+
+```
+  ok     fetchConfig filled the config property
+         decoded: {"m":2,…,"n":3,…,"version":1}
+  ok     the fetched multisig is the deployed 2-of-3
+```
+
+It carries only the `darwin-arm64` variant — the platform it was built on — and the click-through in
+Basecamp itself is shown in the demo video rather than asserted by a script, since no automation
+hook is exposed for it. Both are recorded in [limitations.md](limitations.md) and against P-U2 in
 [criteria-checklist.md](criteria-checklist.md).

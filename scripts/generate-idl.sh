@@ -17,7 +17,29 @@ mkdir -p artifacts
 OUT=artifacts/multisig-idl.json
 
 echo "==> generating IDL from #[lez_program] annotations"
-( cd programs/multisig-spel && cargo run --quiet --bin idl ) | jq . > "$OUT"
+( cd programs/multisig-spel && cargo run --quiet --bin idl ) | jq . > "$OUT.instructions"
+
+# SPEL's IDL carries instructions; account *layouts* come from its separate #[account_type]
+# attribute, whose collector reads field types as written and so cannot see through the aliases our
+# state structs use (Digest32, Threshold, MemberCount, ProgramIdWords). Annotating the structs and
+# spelling the aliases out would edit crates that compile into the guest, changing the ELF whose
+# hash is the deployed ProgramId. This derives the same layouts on the host, from those structs'
+# own source. crates/idl-accounts/tests/roundtrip.rs decodes real Borsh bytes through the result,
+# so the layouts cannot drift from the structs without a test failing.
+echo "==> deriving account layouts from the state structs"
+cargo run --quiet -p pmsig-idl-accounts -- \
+  MultisigConfig,Proposal crates/multisig-core/src/lib.rs crates/core/src/lib.rs > "$OUT.accounts"
+
+jq -s '.[0] + {accounts: .[1].accounts, types: .[1].types}' "$OUT.instructions" "$OUT.accounts" > "$OUT"
+rm -f "$OUT.instructions" "$OUT.accounts"
+
+for acc in MultisigConfig Proposal; do
+  jq -e --arg a "$acc" '.accounts[] | select(.name == $a)' "$OUT" >/dev/null || {
+    echo "FATAL: account layout '$acc' missing from the generated IDL — Basecamp cannot decode" >&2
+    exit 1
+  }
+done
+echo "==> account layouts present: $(jq -r '[.accounts[].name] | join(", ")' "$OUT")"
 
 INSTRUCTIONS=$(jq -r '.instructions | length' "$OUT")
 NAME=$(jq -r '.name' "$OUT")

@@ -303,8 +303,136 @@
       ]
     }
   ],
-  "accounts": [],
-  "types": [],
+  "accounts": [
+    {
+      "name": "MultisigConfig",
+      "type": {
+        "fields": [
+          {
+            "name": "version",
+            "type": "u16"
+          },
+          {
+            "name": "member_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "m",
+            "type": "u8"
+          },
+          {
+            "name": "n",
+            "type": "u8"
+          },
+          {
+            "name": "multisig_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "membership_program_id",
+            "type": {
+              "array": [
+                "u32",
+                8
+              ]
+            }
+          },
+          {
+            "name": "proposal_count",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "Proposal",
+      "type": {
+        "fields": [
+          {
+            "name": "version",
+            "type": "u16"
+          },
+          {
+            "name": "config_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "proposal_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "action",
+            "type": {
+              "defined": "ProposedAction"
+            }
+          },
+          {
+            "name": "nullifiers",
+            "type": {
+              "vec": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          },
+          {
+            "name": "executed",
+            "type": "bool"
+          }
+        ],
+        "kind": "struct"
+      }
+    }
+  ],
+  "types": [
+    {
+      "kind": "enum",
+      "name": "ProposedAction",
+      "variants": [
+        {
+          "fields": [
+            {
+              "name": "recipient",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "amount",
+              "type": "u128"
+            }
+          ],
+          "name": "TreasuryTransfer"
+        }
+      ]
+    }
+  ],
   "errors": [],
   "instruction_type": "pmsig_multisig_core::Instruction"
 }

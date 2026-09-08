@@ -104,6 +104,8 @@ private:
     void        dispatchFfi(const QString& operation, std::function<QString()> fn);
     void        handleFfiResult(const QString& operation, const QString& result);
     QString     callFfi(FfiFn fn, const QJsonObject& args);
+    void        applyFetched(const QString& what, const QString& result, QVariantMap& target,
+                             void (PrivateMultisigBackend::*changed)());
     QJsonObject baseArgs() const;
 
     QString m_walletPath;

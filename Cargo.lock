@@ -5682,6 +5682,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pmsig-idl-accounts"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "pmsig-core",
+ "pmsig-multisig-core",
+ "serde_json",
+ "spel-framework-core",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "pmsig-membership-core"
 version = "0.1.0"
 dependencies = [
@@ -7377,10 +7389,13 @@ dependencies = [
  "base58",
  "borsh",
  "lee_core",
+ "proc-macro2",
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "syn 2.0.119",
  "thiserror 1.0.69",
+ "toml",
 ]
 
 [[package]]

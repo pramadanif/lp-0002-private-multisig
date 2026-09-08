@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 	PrivateMultisigBackend backend(nullptr);
 
 	QQuickWidget view;
-	view.engine()->rootContext()->setContextProperty("backend", &backend);
+	view.engine()->rootContext()->setContextProperty("ctxBackend", &backend);
 	view.setResizeMode(QQuickWidget::SizeRootObjectToView);
 	view.resize(900, 640);
 

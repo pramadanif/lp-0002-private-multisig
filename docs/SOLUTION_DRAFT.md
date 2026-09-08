@@ -106,8 +106,8 @@ as evidence anywhere.
 | | |
 |-|-|
 | Basecamp module | [`app/private_multisig.lgx`](../app/private_multisig.lgx) |
-| Size | 2,620,437 bytes |
-| sha256 | `a5273e76ad1a00c5e5a0554eaedf76cd23b7f57f50f07036b75db9feb0539d3e` |
+| Size | 2,627,632 bytes |
+| sha256 | `f329e0d0fa3c15423515fbb787efe102002074733bd2d505de289e146d69c0c2` |
 | Variant | `darwin-arm64` (built on the machine that produced it — [limitations](limitations.md)) |
 | Install steps | [basecamp-load.md](basecamp-load.md) |
 
@@ -153,12 +153,16 @@ test:
   the Qt the host ships (6.9.2, not the newest installed); and the linker's absolute paths to the
   build machine have to be rewritten. See [basecamp-load.md](basecamp-load.md).
 
-- ~~**The Basecamp module has not been shown loading in Basecamp.**~~ `app/private_multisig.lgx` is
-  built and committed — 2,620,437 bytes, sha256 `1ad70183…b4b943e`, `lgx verify` reports the
-  structure valid, and it contains the C ABI library the UI's thirteen `extern "C"` functions call,
-  with every symbol checked before packaging. But `lgx verify` tests structure, not loading, and the
-  criterion asks for a module that loads. The package also carries only the `darwin-arm64` variant,
-  built on the machine that produced it. **P-U2 is partial and said so.**
+- **The Basecamp module loads, and its panels read the chain.** `app/private_multisig.lgx` —
+  2,627,632 bytes, sha256 `f329e0d0…6d69c0c2` — installs in Logos Basecamp 0.2.3 and opens from
+  Applications → Blockchain. Getting the panels to *do* anything took one more undocumented fact:
+  a `ui_qml` module's QML runs in Basecamp's main process while its plugin runs in a `ui-host`
+  child, so the context property the scaffold set on its own engine was never in scope. Every
+  binding raised `ReferenceError: backend is not defined` behind a window that drew perfectly.
+  The plugin now publishes the API the way Basecamp's own modules do and the QML resolves it
+  through `logos.module()`; `./scripts/check-basecamp-contract.sh` asserts both halves and, with
+  `PMSIG_CONTRACT_LIVE=1`, fetches the deployed config through the plugin's own slots. The package
+  carries only the `darwin-arm64` variant, built on the machine that produced it.
 - **No narrated video.** P-S6 unmet.
 
 Full list: [limitations.md](limitations.md).

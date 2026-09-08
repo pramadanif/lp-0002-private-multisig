@@ -56,3 +56,14 @@ target_link_libraries(PrivateMultisigApp PRIVATE
 set_target_properties(PrivateMultisigApp PROPERTIES
     BUILD_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/lib"
 )
+
+# ── Basecamp contract test ─────────────────────────────────────────────────
+#
+# Checks that this module still satisfies what Basecamp actually requires of it: the plugin object
+# publishes the API (a QtRemoteObjects replica sees properties, signals and public slots), and
+# Main.qml resolves that object through `logos.module()` rather than a context property only the
+# standalone app provides. Run by scripts/check-basecamp-contract.sh.
+add_executable(PrivateMultisigContractTest tests/module_contract_test.cpp)
+target_link_libraries(PrivateMultisigContractTest PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Qml
+)

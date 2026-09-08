@@ -208,17 +208,50 @@ void PrivateMultisigBackend::execute(const QString& configHash, const QString& p
 
 // ── Fetch ────────────────────────────────────────────────────────────────
 
+// A fetch that finds nothing is a failure, not an empty success.
+//
+// `fetch_*` report success as long as the RPC answered, and hand back an empty state when the
+// account holds no bytes or does not decode. Reporting that as success left the panel showing its
+// "No data — press \u21bb to fetch" placeholder with no way to tell an empty account from a
+// misconfigured sequencer, an unknown program id, or a mistyped hash — the three things that
+// actually go wrong. Each now names itself in lastError.
+void PrivateMultisigBackend::applyFetched(const QString& what,
+                                          const QString& result,
+                                          QVariantMap& target,
+                                          void (PrivateMultisigBackend::*changed)()) {
+    const QJsonObject obj = QJsonDocument::fromJson(result.toUtf8()).object();
+    if (!obj.value("success").toBool()) {
+        m_lastError = obj.value("error").toString(result);
+        emit lastErrorChanged();
+        emit operationError("fetch_" + what, m_lastError);
+        return;
+    }
+    const QVariantMap state = obj.value("state").toObject().toVariantMap();
+    if (state.isEmpty()) {
+        m_lastError = QStringLiteral(
+            "no %1 account at that address. Check the %1 hash, and that Settings names the "
+            "sequencer and program id this multisig was deployed to (Settings holds \"%2\" and "
+            "program %3).")
+            .arg(what, m_sequencerUrl,
+                 m_programIdHex.isEmpty() ? QStringLiteral("(unset)") : m_programIdHex);
+        emit lastErrorChanged();
+        emit operationError("fetch_" + what, m_lastError);
+        return;
+    }
+    target = state;
+    (this->*changed)();
+    m_lastError.clear();
+    emit lastErrorChanged();
+}
+
+
 void PrivateMultisigBackend::fetchConfig(const QString& configHash) {
     QJsonObject args = baseArgs();
     args["config_hash"] = configHash;
     QThreadPool::globalInstance()->start([this, args]() {
         QString result = callFfi(private_multisig_fetch_config, args);
         QMetaObject::invokeMethod(this, [this, result]() {
-            QJsonObject obj = QJsonDocument::fromJson(result.toUtf8()).object();
-            if (obj.value("success").toBool() && obj.contains("state")) {
-                m_config = obj.value("state").toObject().toVariantMap();
-                emit configChanged();
-            }
+            applyFetched("config", result, m_config, &PrivateMultisigBackend::configChanged);
         }, Qt::QueuedConnection);
     });
 }
@@ -229,11 +262,7 @@ void PrivateMultisigBackend::fetchProposal(const QString& proposalSeed) {
     QThreadPool::globalInstance()->start([this, args]() {
         QString result = callFfi(private_multisig_fetch_proposal, args);
         QMetaObject::invokeMethod(this, [this, result]() {
-            QJsonObject obj = QJsonDocument::fromJson(result.toUtf8()).object();
-            if (obj.value("success").toBool() && obj.contains("state")) {
-                m_proposal = obj.value("state").toObject().toVariantMap();
-                emit proposalChanged();
-            }
+            applyFetched("proposal", result, m_proposal, &PrivateMultisigBackend::proposalChanged);
         }, Qt::QueuedConnection);
     });
 }

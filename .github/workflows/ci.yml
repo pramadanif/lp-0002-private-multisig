@@ -235,6 +235,29 @@ jobs:
       - name: check-basecamp-privacy.sh
         run: ./scripts/check-basecamp-privacy.sh
 
+  basecamp-contract:
+    name: the Basecamp module is actually wired to its backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The module shipped for a day looking complete and doing nothing: Basecamp renders a ui_qml
+      # module's QML in its own process, so the context property the plugin set on its own engine
+      # was never in scope and every binding raised "backend is not defined" behind a window that
+      # drew perfectly. Nothing in the build noticed, because everything built. This asserts the
+      # contract instead: the plugin publishes the API, and the QML resolves it through
+      # logos.module() the way Basecamp's own modules do.
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.9.2
+          modules: qtquickcontrols2
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install libpcsclite (the wallet links pcsc-sys)
+        run: sudo apt-get update && sudo apt-get install -y libpcsclite-dev
+      - name: check-basecamp-contract.sh
+        run: PMSIG_QT_DIR="$QT_ROOT_DIR" ./scripts/check-basecamp-contract.sh
+
   scripts-lint:
     name: shellcheck
     runs-on: ubuntu-latest

@@ -320,8 +320,136 @@ static PROGRAM_IDL_JSON: &str = "{
       ]
     }
   ],
-  \"accounts\": [],
-  \"types\": [],
+  \"accounts\": [
+    {
+      \"name\": \"MultisigConfig\",
+      \"type\": {
+        \"fields\": [
+          {
+            \"name\": \"version\",
+            \"type\": \"u16\"
+          },
+          {
+            \"name\": \"member_root\",
+            \"type\": {
+              \"array\": [
+                \"u8\",
+                32
+              ]
+            }
+          },
+          {
+            \"name\": \"m\",
+            \"type\": \"u8\"
+          },
+          {
+            \"name\": \"n\",
+            \"type\": \"u8\"
+          },
+          {
+            \"name\": \"multisig_id\",
+            \"type\": {
+              \"array\": [
+                \"u8\",
+                32
+              ]
+            }
+          },
+          {
+            \"name\": \"membership_program_id\",
+            \"type\": {
+              \"array\": [
+                \"u32\",
+                8
+              ]
+            }
+          },
+          {
+            \"name\": \"proposal_count\",
+            \"type\": \"u64\"
+          }
+        ],
+        \"kind\": \"struct\"
+      }
+    },
+    {
+      \"name\": \"Proposal\",
+      \"type\": {
+        \"fields\": [
+          {
+            \"name\": \"version\",
+            \"type\": \"u16\"
+          },
+          {
+            \"name\": \"config_hash\",
+            \"type\": {
+              \"array\": [
+                \"u8\",
+                32
+              ]
+            }
+          },
+          {
+            \"name\": \"proposal_id\",
+            \"type\": {
+              \"array\": [
+                \"u8\",
+                32
+              ]
+            }
+          },
+          {
+            \"name\": \"action\",
+            \"type\": {
+              \"defined\": \"ProposedAction\"
+            }
+          },
+          {
+            \"name\": \"nullifiers\",
+            \"type\": {
+              \"vec\": {
+                \"array\": [
+                  \"u8\",
+                  32
+                ]
+              }
+            }
+          },
+          {
+            \"name\": \"executed\",
+            \"type\": \"bool\"
+          }
+        ],
+        \"kind\": \"struct\"
+      }
+    }
+  ],
+  \"types\": [
+    {
+      \"kind\": \"enum\",
+      \"name\": \"ProposedAction\",
+      \"variants\": [
+        {
+          \"fields\": [
+            {
+              \"name\": \"recipient\",
+              \"type\": {
+                \"array\": [
+                  \"u8\",
+                  32
+                ]
+              }
+            },
+            {
+              \"name\": \"amount\",
+              \"type\": \"u128\"
+            }
+          ],
+          \"name\": \"TreasuryTransfer\"
+        }
+      ]
+    }
+  ],
   \"errors\": [],
   \"instruction_type\": \"pmsig_multisig_core::Instruction\"
 }
@@ -1073,6 +1201,36 @@ pub fn compute_proposal_pda(program_id: &ProgramId, proposal_seed: &[u8; 32]) ->
     let seed_bytes: [u8; 32] = *proposal_seed;
     let pda_seed = nssa_core::program::PdaSeed::new(seed_bytes);
     AccountId::for_public_pda(program_id, &pda_seed)
+}
+
+/// Auto-generated Borsh type: `ProposedAction`.
+#[allow(dead_code)]
+#[derive(borsh::BorshDeserialize)]
+enum ProposedAction {
+    TreasuryTransfer { recipient: [u8; 32], amount: u128 },
+}
+
+/// Auto-generated Borsh state struct for `multisig_config` account.
+#[derive(borsh::BorshDeserialize)]
+struct MultisigConfigState {
+    pub version: u16,
+    pub member_root: [u8; 32],
+    pub m: u8,
+    pub n: u8,
+    pub multisig_id: [u8; 32],
+    pub membership_program_id: [u32; 8],
+    pub proposal_count: u64,
+}
+
+/// Auto-generated Borsh state struct for `proposal` account.
+#[derive(borsh::BorshDeserialize)]
+struct ProposalState {
+    pub version: u16,
+    pub config_hash: [u8; 32],
+    pub proposal_id: [u8; 32],
+    pub action: ProposedAction,
+    pub nullifiers: Vec<[u8; 32]>,
+    pub executed: bool,
 }
 
 /// FFI: fetch and decode `config` PDA account.

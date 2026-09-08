@@ -30,9 +30,14 @@ Repository: <https://github.com/pramadanif/lp0002>
 > CI runs the same lifecycle against a standalone sequencer on every push
 > ([run 34052567273](https://github.com/pramadanif/lp0002/actions/runs/34052567273), 3 h 41 m, green).
 >
-> **Not yet done**, and not claimed: the Basecamp package is built and committed
-> (`app/private_multisig.lgx`, `lgx verify` valid) but carries only the `darwin-arm64` variant and
-> has not been shown loading in Basecamp (**P-U2**); and there is no narrated video (**P-S6**).
+> The Basecamp module installs in Logos Basecamp 0.2.3, opens from **Applications → Blockchain**,
+> and reads that deployment: `./scripts/check-basecamp-contract.sh` fetches the config through the
+> plugin's own slots — the path a press of ↻ takes — and decodes the same 2-of-3 (**P-U2**). It
+> carries only the `darwin-arm64` variant.
+>
+> **Not yet done**, and not claimed: the narrated video (**P-S6**). Five of the eleven evidence URLs
+> are on chain but not yet indexed by the public explorer; `./scripts/check-explorer-links.sh`
+> reports which, and exits 75 until they render.
 >
 > [`docs/criteria-checklist.md`](docs/criteria-checklist.md) maps every criterion to its evidence,
 > including what is missing.

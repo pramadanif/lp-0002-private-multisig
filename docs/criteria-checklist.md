@@ -14,12 +14,12 @@ Status: ✅ evidence exists · ◐ partial · ⛔ not met
 
 | ID | Criterion | Status | Evidence |
 |----|-----------|--------|----------|
-| **P-F1** | Shielded member approves without revealing identity to on-chain observers **or other members** | ✅ | On chain: tx `f2458791…198fbcb5` from `Private/Dm4TU2ht…`; the proposal account holds a count and nullifiers only (`artifacts/phase-E-ppe-approve-SUCCESS.txt`). Against co-members: `crates/sdk/tests/peer_privacy.rs` — `prepare_approval` takes a public `MultisigView` plus the member's own secrets, and has **no parameter** for another member's identity |
+| **P-F1** | Shielded member approves without revealing identity to on-chain observers **or other members** | ✅ | On the live public testnet, two approvals are separate **privacy-preserving** transactions ([`a3eaeb3a…`](https://explorer.testnet.lez.logos.co/transaction/a3eaeb3a773f35a48935944ca1b15bed683265dbded90633c094e4ef56aa4f4b), [`2a283d3c…`](https://explorer.testnet.lez.logos.co/transaction/2a283d3c8887ef552bf56f415bbd6b534a4424e0765b590f3b44f6f6215a0aaa)); `./scripts/verify-onchain.sh` re-reads the proposal from public data and finds a count and nullifiers only. Against co-members: `crates/sdk/tests/peer_privacy.rs` — `prepare_approval` takes a public `MultisigView` plus the member's own secrets, and has **no parameter** for another member's identity |
 | **P-F2** | On-chain verifier confirms M approvals **without recording which** members | ✅ | Decoded from chain: `approvals=1, nullifier[0]=c67cce32…, executed=false`, no identity field. `Proposal` has six fields and none can hold a roster (`crates/multisig-core/src/lib.rs`) |
 | **P-F3** | A member cannot approve twice (nullifiers) | ✅ | `a_member_cannot_approve_the_same_proposal_twice` → error **1002** (`7002` on chain); `a_member_cannot_double_vote_from_another_of_their_addresses` (nullifier keyed to `nsk`, not account id) |
-| **P-F4** | Completed execution unlinkable to any individual member | ✅ | Shown for a **completed execute** on the public testnet. The proposal account after execution holds `approvals=2` and two nullifiers and no identity field; `execute` (`c226f747…`, block 43065) is a public transaction submitted by the payer, and nothing in it or in the account names an approver. The two approvals are separate privacy-preserving transactions whose only on-chain trace is a nullifier. `the_on_chain_record_does_not_distinguish_which_members_approved` |
+| **P-F4** | Completed execution unlinkable to any individual member | ✅ | Shown for a **completed execute** on the live public testnet. After execution the proposal account holds `2 approvals of 2 required, executed, all nullifiers distinct` and no identity field; `execute` ([`d1a47fdd…`](https://explorer.testnet.lez.logos.co/transaction/d1a47fddeddbfebd1a387f52ac91ecaed43f8c20275d6fb82bf3acd2f460057e)) is a public transaction submitted by the payer, and nothing in it or in the account names an approver. `the_on_chain_record_does_not_distinguish_which_members_approved` |
 | **P-F5** | Proof generation runs client-side on a standard laptop | ✅ | Standalone membership proof **115.97 s**; composed approval **≈19 min 26 s**, peak **8.74 GB**, on an 8-core 16 GB laptop with no GPU. Both in `docs/cu-costs.md`. Caveat stated: needs ~7 GB *free* (`docs/limitations.md` §10a) |
-| **P-F6** | Reference integration: threshold-gated action on LEZ **testnet** with shielded members | ✅ | LEZ public testnet: multisig `n3HuidKX…` created (`d64d3566…`, block 43002), treasury funded 100, proposal (`1102908e…`), two anonymous approvals (`b84980b3…` block 43040, `5234e72b…` block 43061), `execute` (`c226f747…`, block 43065). Treasury 100 → 40, payee 0 → 60. [`docs/DEPLOYMENT.md`](DEPLOYMENT.md) |
+| **P-F6** | Reference integration: threshold-gated action on LEZ **testnet** with shielded members | ✅ | LEZ public testnet, still live: config PDA `4ZKN1S7R8F9V2fJEzDz65ogabhDi8sDS82W5i4mADZxt` created, treasury funded 100, a proposal, two anonymous approvals and `execute` — every transaction linked in [`docs/DEPLOYMENT.md`](DEPLOYMENT.md). Treasury 100 → 40, payee `9NJmD3aw…` 0 → 60, re-read from chain today by `./scripts/verify-onchain.sh` |
 | **P-F7** | ≥1 multisig on testnet: create + propose + approve-to-threshold + execute, reproducible with evidence | ✅ | All four steps on the public testnet, evidence in [`docs/DEPLOYMENT.md`](DEPLOYMENT.md) and [`evidence/testnet-lifecycle-verified.md`](../evidence/testnet-lifecycle-verified.md). Reproducible: `./scripts/deploy-testnet.sh` from the committed reproducible binaries, and `./scripts/verify-onchain.sh` re-checks it from public data alone — it passed, including INV-7 (the payee named *by the proposal* holds the 60 approved) and the exact treasury remainder |
 | **P-F8** | Full documentation and a clean public repository | ✅ | Public repo, 128 tests, ADRs, security model, error codes, limitations, `SOLUTION_DRAFT.md`, `BUGS_FILED.md`, `DEPLOYMENT.md`, and a documentation index in the README |
 
@@ -28,7 +28,7 @@ Status: ✅ evidence exists · ◐ partial · ⛔ not met
 | ID | Criterion | Status | Evidence |
 |----|-----------|--------|----------|
 | **P-U1** | Module/SDK for building Logos modules | ✅ | `pmsig-sdk` (prove + member API), `pmsig-core`, `pmsig-store`, `pmsig-cli`. Guide: `docs/integration.md`, whose code is the **compiled** example `crates/sdk/examples/integrate.rs` |
-| **P-U2** | Basecamp GUI: local build, downloadable assets, loadable | ◐ | **Built and committed:** `app/private_multisig.lgx`, 2,605,557 bytes, sha256 `785eb121…40746ad`, `lgx verify` reports the structure valid. It contains the plugin, `qml/Main.qml`, and `libpmsig_ffi.dylib` — the C ABI the UI's thirteen `extern "C"` functions call, generated from the same IDL and checked symbol by symbol before packaging. Build instructions: `./scripts/build-basecamp.sh`. **Two gaps remain:** the package carries only the `darwin-arm64` variant, and it has not been shown loading in Basecamp |
+| **P-U2** | Basecamp GUI: local build, downloadable assets, loadable | ✅ | `app/private_multisig.lgx`, 2,627,632 bytes, sha256 `f329e0d0…6d69c0c2`. Built by `./scripts/build-basecamp.sh`, which checks every one of the thirteen `extern "C"` symbols the UI calls before packaging. It installs in Logos Basecamp 0.2.3 and opens from **Applications → Blockchain**. Its panels are wired to the chain: `./scripts/check-basecamp-contract.sh` (CI job *the Basecamp module is actually wired to its backend*) asserts the plugin publishes the API Basecamp replicates and that `Main.qml` resolves it through `logos.module()`, and with `PMSIG_CONTRACT_LIVE=1` fetches the deployed config through the plugin's own slots — the path a press of ↻ takes — decoding it to the same 2-of-3 `verify-onchain.sh` reads. **Scope:** the package carries only the `darwin-arm64` variant, and the click-through inside Basecamp is shown in the demo video, since the host exposes no automation hook to assert it from a script |
 | **P-U3** | IDL for the LEZ program, using SPEL | ✅ | `artifacts/multisig-idl.json`, generated from `#[lez_program]` at compile time by `scripts/generate-idl.sh`. Independently confirmed usable: the SPEL CLI built working commands from it and submitted real transactions |
 
 ## Reliability
@@ -73,8 +73,8 @@ rather than merely implemented.
 
 | | Count |
 |---|---|
-| ✅ evidence exists | **19** |
-| ◐ partial | **1** |
+| ✅ evidence exists | **20** |
+| ◐ partial | **0** |
 | ⛔ not met | **1** |
 
 These counts are checked against the rows above by `scripts/check-criteria-summary.py`, which CI
@@ -82,9 +82,9 @@ runs. They drifted badly once — the summary read 10/5/6 while the rows read 19
 checklist that disagrees with itself is worse than none, because it is read as the submission's own
 account of what it has done.
 
-**What is outstanding:** P-U2, the Basecamp module — the package is built, committed and verified
-structurally, but it has not been shown loading in Basecamp and carries only the `darwin-arm64`
-variant. And P-S6, the narrated video, which is not recorded.
+**What is outstanding:** P-S6, the narrated video, which is not recorded. P-U2 no longer is: the
+module installs, opens, and reads the deployed multisig through the same slots the UI calls — it
+carries only the `darwin-arm64` variant, which is a stated scope limit rather than a missing piece.
 
 
 This file is regenerated by hand as phases land. Preflight check **PF-07** fails the submission if

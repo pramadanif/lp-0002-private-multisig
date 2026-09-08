@@ -1,0 +1,28 @@
+[package]
+name = "pmsig-idl-accounts"
+description = "Derives the IDL's account layouts from the on-chain state structs' own source."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "idl-accounts"
+path = "src/main.rs"
+
+[dependencies]
+# The same conversion SPEL's own `#[account_type]` collector uses, so the layouts this emits are
+# the layouts SPEL would emit — we only resolve type aliases, which its syn-level scanner cannot.
+spel_framework_core = { package = "spel-framework-core", git = "https://github.com/logos-co/spel.git", rev = "5126b7ed8a9b", features = ["idl-gen", "decode"] }
+syn = { version = "2", features = ["full", "parsing"] }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+pmsig-core = { workspace = true }
+pmsig-multisig-core = { workspace = true }
+borsh = { workspace = true }
+
+[lints]
+workspace = true
