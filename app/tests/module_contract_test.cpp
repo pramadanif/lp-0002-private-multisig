@@ -172,6 +172,29 @@ int main(int argc, char** argv) {
               .arg(g_qmlProblems.size()));
     for (const QString& p : g_qmlProblems) qInfo().noquote() << "        " << p;
 
+    // The Create Multisig panel has to hand the plugin a ProgramId as eight little-endian words,
+    // while the only form anyone holds is the 64-character ImageID hex. It passed the raw string
+    // for a while, which QML cannot convert to a QVariantList — the slot was simply never called
+    // and the button did nothing. These are the real membership ImageID and the words the chain
+    // holds for it, read back from the deployed config account.
+    {
+        QVariant words;
+        QMetaObject::invokeMethod(
+            rootObj, "programIdWords", Q_RETURN_ARG(QVariant, words),
+            Q_ARG(QVariant,
+                  QStringLiteral("960db4f24de1f1b0ebdc064a9be1246bde0e6a06f8be7f349fa562cc4207eade")));
+        const QVariantList got = words.toList();
+        check(got.size() == 8 && got.value(0).toUInt() == 4071886230u
+                  && got.value(7).toUInt() == 3739879234u,
+              QStringLiteral("an ImageID hex becomes the eight words the chain holds"));
+
+        QVariant refused;
+        QMetaObject::invokeMethod(rootObj, "programIdWords", Q_RETURN_ARG(QVariant, refused),
+                                  Q_ARG(QVariant, QStringLiteral("not an image id")));
+        check(refused.toList().isEmpty(),
+              QStringLiteral("anything that is not a ProgramId is refused, not sent malformed"));
+    }
+
     // ── 3. Optionally, the whole path a press of the fetch button takes ─────────────────────────
     if (qEnvironmentVariableIsSet("PMSIG_CONTRACT_LIVE")) {
         const QString hash = qEnvironmentVariable("PMSIG_CONFIG_HASH");

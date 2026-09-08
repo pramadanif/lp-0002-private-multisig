@@ -1,6 +1,6 @@
 # Loading the module in Logos Basecamp
 
-`app/private_multisig.lgx` — 2631589 bytes, sha256 `5d6f70f3a34b754f83440638b906a78bffca7d9257bbcbbe2c30bc210fad98a0`, variant **darwin-arm64**.
+`app/private_multisig.lgx` — 2632654 bytes, sha256 `2da8a47af92fe43ac2bde9825ad3c482e36f463472b4918bc53a63b466fdec36`, variant **darwin-arm64**.
 
 Verify what you downloaded before installing it:
 

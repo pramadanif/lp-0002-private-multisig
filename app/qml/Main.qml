@@ -29,6 +29,25 @@ Item {
     readonly property bool backendReady: backend !== null && backend !== undefined
 
 
+    // A ProgramId on the wire is [u32; 8], little-endian per four bytes — the same words
+    // `verify-onchain.sh` and the FFI use. Everything a person actually holds writes it as the
+    // 64-character ImageID hex, so accept that (and a plain list of eight numbers), and refuse
+    // anything else rather than sending a malformed list the FFI will reject with a worse message.
+    function programIdWords(text) {
+        var t = (text || "").trim().replace(/^0x/i, "").replace(/\s+/g, "")
+        if (/^[0-9a-fA-F]{64}$/.test(t)) {
+            var out = []
+            for (var i = 0; i < 8; i++) {
+                var b = t.substr(i * 8, 8)
+                out.push(parseInt(b.substr(6, 2) + b.substr(4, 2) + b.substr(2, 2) + b.substr(0, 2), 16))
+            }
+            return out
+        }
+        var parts = (text || "").split(/[^0-9]+/).filter(function (s) { return s.length > 0 })
+        if (parts.length !== 8) return []
+        return parts.map(function (s) { return parseInt(s, 10) })
+    }
+
     // `fieldHistory` returns a QStringList in-process and a pending call over remoting. Only the
     // former can fill a dropdown; the latter yields an empty list rather than a broken model.
     function historyFor(key) {
@@ -1041,7 +1060,7 @@ Item {
                             TextField {
                                 id: create_multisig_membership_program_idf
                                 Layout.fillWidth: true
-                                placeholderText: "value"
+                                placeholderText: "membership ImageID, 64 hex characters"
                                 color: root.colText
                                 placeholderTextColor: root.colMuted
                                 background: Rectangle {
@@ -1107,7 +1126,14 @@ Item {
                             text: backend.busy ? "\u2026" : "Create Multisig"
                             enabled: !backend.busy
                             Layout.rightMargin: 24; Layout.alignment: Qt.AlignRight
-                            onClicked: backend.createMultisig(create_multisig_creator_idf.text, create_multisig_config_hashf.text, create_multisig_member_rootf.text, parseInt(create_multisig_mf.text), parseInt(create_multisig_nf.text), create_multisig_multisig_idf.text, create_multisig_membership_program_idf.text)
+                            onClicked: {
+                                var words = root.programIdWords(create_multisig_membership_program_idf.text)
+                                if (words.length !== 8) {
+                                    toast.show("\u2717 membership program id: expected the 64-character ImageID hex, or eight numbers", root.colError, 7000)
+                                    return
+                                }
+                                backend.createMultisig(create_multisig_creator_idf.text, create_multisig_config_hashf.text, create_multisig_member_rootf.text, parseInt(create_multisig_mf.text), parseInt(create_multisig_nf.text), create_multisig_multisig_idf.text, words)
+                            }
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
