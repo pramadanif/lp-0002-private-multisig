@@ -317,7 +317,7 @@ log "create_proposal (treasury transfer)"
 # account cannot be credited, an account with a default owner and non-default state is refused by
 # validate_execution rule 7, and the payee cannot be the submitter because account ids in a message
 # must be unique.
-if [[ "${PMSIG_RESUME:-0}" == "1" ]]; then
+if [[ "${PMSIG_RESUME:-0}" == "1" && "${PMSIG_HAVE_PROPOSAL:-0}" == "1" ]]; then
   # Reuse the payee the proposal already names. Creating a fresh one would make `execute` refuse it
   # under INV-7 — the transfer that executes is the transfer that was approved — after two more
   # twenty-minute proofs.
@@ -360,8 +360,12 @@ print(f'{n:064x}')
 " "$PAYEE")
 [[ ${#RECIPIENT} -eq 64 ]] || die "could not derive a 32-byte recipient id from $PAYEE (got '$RECIPIENT')"
 info "payee: $PAYEE ($RECIPIENT)"
-if [[ "${PMSIG_RESUME:-0}" == "1" ]]; then
-  TX_PROPOSE="${PMSIG_TX_PROPOSE:?PMSIG_RESUME=1 needs PMSIG_TX_PROPOSE — the create_proposal tx hash from the original run}"
+# A run can stop before the proposal exists as easily as after it. PMSIG_RESUME=1 alone means the
+# multisig and its treasury are already on chain; add PMSIG_HAVE_PROPOSAL=1 only when the proposal
+# is there too. Skipping a create_proposal that never happened leaves the approvals with nothing to
+# approve, twenty minutes later.
+if [[ "${PMSIG_RESUME:-0}" == "1" && "${PMSIG_HAVE_PROPOSAL:-0}" == "1" ]]; then
+  TX_PROPOSE="${PMSIG_TX_PROPOSE:?PMSIG_HAVE_PROPOSAL=1 needs PMSIG_TX_PROPOSE — the create_proposal tx hash from the original run}"
   info "create_proposal: already on chain, tx $TX_PROPOSE"
 else
   TX_PROPOSE=$(run_ix propose -- create-proposal \
