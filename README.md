@@ -8,19 +8,31 @@ Built for [λPrize LP-0002](docs/plan/LP-0002.md). Licensed **MIT OR Apache-2.0*
 
 Repository: <https://github.com/pramadanif/lp0002>
 
-> **Status: phases −1 through D complete; E and F in progress.** The membership guest proves and
-> verifies for real (`RISC0_DEV_MODE=0`, 115.97 s on a laptop); the on-chain SPEL program enforces the
-> full lifecycle with a published IDL; and the privacy-preserving composition **has** been
-> demonstrated — an anonymous approval proved and confirmed on a real standalone sequencer, ≈19 min
-> and 8.74 GB (`artifacts/phase-E-ppe-approve-SUCCESS.txt`).
+> **Status: the full lifecycle runs on the LEZ public testnet.** A 2-of-3 multisig was created,
+> funded, proposed against, approved twice by shielded members anonymously with `RISC0_DEV_MODE=0`,
+> and executed — moving the treasury 100 → 40 and the payee 0 → 60, with both sides of the move
+> visible in accounts owned by two different programs. `./scripts/verify-onchain.sh` re-checks all of
+> it from public data alone and passes, including that the payee named *by the proposal* holds the
+> amount that was approved.
 >
-> **Not yet done**, and not claimed: no completed unattended `./demo.sh` run, so **P-S5** is not
-> claimed; the `e2e-sequencer` CI job runs on every push to `main` but has not yet gone green, so
-> **P-S2** is not claimed; nothing is deployed to the public testnet, so **P-F6/P-F7/P-S1** and the
-> on-chain CU figures for **P-P1** are unmet; the Basecamp module is generated but no `.lgx` is
-> built (**P-U2**); and there is no narrated video (**P-S6**).
+> | | |
+> |-|-|
+> | Network | LEZ public testnet, `https://testnet.lez.logos.co` |
+> | `membership` | ImageID `960db4f2…07eade`, deployed block 38661 |
+> | `multisig` | ImageID `79cf1dba…4a60468`, deployed block 40565 |
+> | Multisig (config PDA) | `n3HuidKXZA76ZpsrDr3NLitRFqQDndr6BHxzaeq7aRH` |
+> | Proposal PDA | `DgPGeMewSSoSJ5jkPMYfZaQTDNuDdiKPB6Q4V6go6j4y` |
+> | Payee | `AwB9sZARmYaW6znJMcsCwSoJjnRcvuwE1cKKf8z8Swos` |
+> | Lifecycle | create 43002 · propose 43004 · approve 43040 · approve 43061 · execute 43065 |
 >
-> [Build status](#build-status) has the per-phase detail;
+> Every transaction is listed with its explorer link in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+> CI runs the same lifecycle against a standalone sequencer on every push
+> ([run 34052567273](https://github.com/pramadanif/lp0002/actions/runs/34052567273), 3 h 41 m, green).
+>
+> **Not yet done**, and not claimed: the Basecamp package is built and committed
+> (`app/private_multisig.lgx`, `lgx verify` valid) but carries only the `darwin-arm64` variant and
+> has not been shown loading in Basecamp (**P-U2**); and there is no narrated video (**P-S6**).
+>
 > [`docs/criteria-checklist.md`](docs/criteria-checklist.md) maps every criterion to its evidence,
 > including what is missing.
 
@@ -83,10 +95,10 @@ Each phase has a status document recording the exact commands run, their exit co
 | B | Membership + nullifier guest, one real `RISC0_DEV_MODE=0` proof | ✅ [`docs/phase-B-status.md`](docs/phase-B-status.md) |
 | C | SPEL program: create / propose / approve / execute, IDL | ✅ [`docs/phase-C-status.md`](docs/phase-C-status.md) |
 | D | SDK, CLI, restart-resume, peer privacy | ✅ [`docs/phase-D-status.md`](docs/phase-D-status.md) |
-| E | `demo.sh` against a standalone sequencer, CI e2e | ◐ [`docs/phase-E-status.md`](docs/phase-E-status.md) |
-| F | Basecamp app, downloadable `.lgx` | ◐ [`docs/phase-F-status.md`](docs/phase-F-status.md) |
-| G | Testnet deployment, CU costs, public verification | ☐ |
-| H | Documentation, preflight green, narrated video | ☐ |
+| E | `demo.sh` against a standalone sequencer, CI e2e | ✅ [`docs/phase-E-status.md`](docs/phase-E-status.md) |
+| F | Basecamp app, downloadable `.lgx` | ◐ built and committed; one variant, not yet shown loading — [`docs/phase-F-status.md`](docs/phase-F-status.md) |
+| G | Testnet deployment, CU costs, public verification | ✅ [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) |
+| H | Documentation, preflight green, narrated video | ◐ video outstanding (human gate) |
 
 Progress and blockers: [`docs/TRACKING.md`](docs/TRACKING.md).
 Criteria and their status: [`docs/criteria-checklist.md`](docs/criteria-checklist.md). The criteria list alone, with the plan's `P-*` ids: [`PRIZE_CHECKLIST.md`](PRIZE_CHECKLIST.md).
