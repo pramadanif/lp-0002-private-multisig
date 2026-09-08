@@ -100,13 +100,19 @@ redact_witness() {
   local f="$1"
   [[ -f "$f" ]] || return 0
   local marker='<redacted: the member'"'"'s nullifier secret key>'
-  sed -i '' -E \
+  # A temp file, not `sed -i`: BSD sed wants a suffix argument and GNU sed wants it attached, so
+  # `-i ''` works on macOS and makes GNU sed try to open a file named "". This runs on both — the
+  # e2e job is Linux — and a failure here must never be shrugged off, because what it leaves behind
+  # is a spending key.
+  sed -E \
     -e "s/(witness[[:space:]]*[=:][[:space:]]*)0x[0-9a-fA-F]+/\1$marker/g" \
     -e "s/^([[:space:]]*Serialized instruction data.*)$/\1 $marker/" \
     -e "s/^[[:space:]]*\[[0-9a-f]{8},.*$/    $marker/" \
-    "$f" 2>/dev/null || return 0
-  grep -qE 'witness[[:space:]]*[=:][[:space:]]*0x' "$f" \
-    && die "failed to redact the witness from $f — refusing to leave a spending key in a log"
+    "$f" > "$f.redacted" || die "could not redact $f — refusing to leave a spending key in a log"
+  mv -f "$f.redacted" "$f" || die "could not replace $f with its redacted copy"
+  if grep -qE 'witness[[:space:]]*[=:][[:space:]]*0x' "$f"; then
+    die "redaction did not remove the witness from $f"
+  fi
   return 0
 }
 

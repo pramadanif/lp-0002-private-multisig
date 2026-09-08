@@ -292,5 +292,12 @@ which `.gitignore` covers, and none exists anywhere else in the tree. The commit
 `artifacts/phase-E-ppe-approve-SUCCESS.txt` describes the witness's layout — "1312 byte Borsh —
 nsk, vpk, identifier, Merkle path" — without containing it.
 
+**And the fix had a bug of its own, found ten minutes later.** The first redaction used
+`sed -i ''`, which is the macOS spelling. GNU sed wants the suffix attached, so `-i ''` makes it
+open a file named `""`, fail, and — because the helper then checks its own work — abort the run.
+The e2e job runs on Linux. That would have failed CI at the first approval, about two hours in,
+with an error about a missing file rather than about sed. Rewritten to a temp file and a `mv`,
+which behaves the same on both, and a failure now aborts loudly instead of being shrugged off.
+
 **What it cost to find:** nothing but reading a file before publishing it. **What it would have cost
 not to:** the one secret this entire prize is about, in public, in the repository submitted to win it.
