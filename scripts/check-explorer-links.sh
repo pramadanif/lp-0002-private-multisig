@@ -51,12 +51,22 @@ fi
 # the index is merely behind — reported, not failed. If neither has it, that is still a failure.
 RPC_FOR_INDEX="${PMSIG_RPC:-https://testnet.lez.logos.co}"
 pending=0
+# Saying a transaction is not on the chain is the strong claim here — it is what turns a link into
+# a failure and a submission into "not ready". One dropped response must not be enough to make it.
+# A privacy-preserving transaction is 364 KB, so a slow fetch is ordinary; three tries were the
+# difference between this exiting 75 and exiting 1 on successive runs over the same chain state.
 chain_has() {
   local h="$1"
   [[ ${#h} -eq 64 ]] || return 1
-  curl -s -X POST "$RPC_FOR_INDEX" -H 'content-type: application/json' \
-    --data "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$h\"]}" \
-    --max-time 20 2>/dev/null | grep -q '"result"[[:space:]]*:[[:space:]]*[^n]'
+  for _ in 1 2 3; do
+    if curl -s -X POST "$RPC_FOR_INDEX" -H 'content-type: application/json' \
+         --data "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$h\"]}" \
+         --max-time 90 2>/dev/null | grep -q '"result"[[:space:]]*:[[:space:]]*[^n]'; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
 }
 
 fail=0
