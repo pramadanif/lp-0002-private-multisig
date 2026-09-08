@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# preflight-submission.sh — plan gate H15, spec in planlp0002.md §6 (PF-01 … PF-15).
+# preflight-submission.sh — plan gate H15, spec in planlp0002.md §6 (PF-01 … PF-16).
 #
 # Exits 0 only when every check passes. Any FAIL or PENDING check exits 1.
 #
@@ -272,6 +272,22 @@ elif grep -qE '\./demo\.sh' docs/SOLUTION_DRAFT.md; then
   ok "PF-14" "SOLUTION_DRAFT cites ./demo.sh as the prize demo"
 else
   bad "PF-14" "SOLUTION_DRAFT does not cite ./demo.sh as the prize demo"
+fi
+
+# PF-16 — no tracked file carries an approval witness
+#
+# The SPEL CLI echoes the arguments it was given, and the approval's witness is the member's
+# ApprovalWitness — first field `nsk`, their nullifier secret key. Both approve scripts now redact
+# it from the logs they write, and .e2e/ is ignored; this is the check that a copy never reaches a
+# tracked file anyway. docs/video-transcript.md asks for a run log to be published beside the
+# recording, so the path from "helpful evidence" to "a spending key in the submission repository" is
+# one `git add -f` long.
+witness_leaks=$(git ls-files -z 2>/dev/null \
+  | xargs -0 grep -lE 'witness[[:space:]]*[=:][[:space:]]*0x[0-9a-fA-F]{32,}' 2>/dev/null || true)
+if [[ -n "$witness_leaks" ]]; then
+  bad "PF-16" "a tracked file contains an approval witness — that is a spending key: $witness_leaks"
+else
+  ok "PF-16" "no tracked file contains an approval witness"
 fi
 
 # PF-15 — print the pin and remind about day-of re-verification

@@ -96,8 +96,15 @@ is hidden, so:
 - put an on-screen label — e.g. `time-lapse ×60, no cuts` — over that section;
 - show the `RISC0_DEV_MODE=0` banner and the start at real speed, and the receipt and confirmation
   at real speed;
-- commit the unedited run log alongside it, so a reviewer who doubts the edit can check the
-  timestamps against `artifacts/phase-E-ppe-approve-SUCCESS.txt` and the demo log.
+- publish the unedited **top-level** run log alongside it, so a reviewer who doubts the edit can
+  check the timestamps against `artifacts/phase-E-ppe-approve-SUCCESS.txt` and the demo log.
+
+**Not the per-approval logs.** `.e2e/run/approve*.log` records what the SPEL CLI was invoked with,
+and one of those arguments is the member's `ApprovalWitness` — first field `nsk`, their nullifier
+secret key. The scripts now redact it as soon as the approval finishes, and preflight **PF-16**
+fails the submission if any tracked file carries one, but do not go looking for a way around that:
+publishing a spending key is the one mistake this prize cannot be recovered from. See
+[tried-failed.md](tried-failed.md).
 
 The point is that a reviewer never has to *trust* the edit: the elapsed time is on screen and the
 raw log is in the repo. Two approvals are needed for full M, so this happens twice — record both,

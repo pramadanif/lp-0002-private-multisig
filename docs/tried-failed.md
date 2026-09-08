@@ -250,3 +250,39 @@ failure*.
 **The rule.** Never pipe a Rust process into a reader that can stop early — `awk ... exit`,
 `head -n`, `grep -q`, `grep -m1`. Write to a file and parse the file. And do not send stderr to
 `/dev/null` on any path whose failures have to be diagnosable.
+
+## A member's spending key, sitting in a log file
+
+Found on 2026-09-09 while deciding which run log to publish beside the demo video.
+
+The SPEL CLI prints every argument it was handed, and then the serialised instruction data. For
+`approve`, one of those arguments is the `ApprovalWitness`, whose first field is `nsk` — the
+member's nullifier secret key. Both approve scripts redirect that output to a per-run log, so the
+key sat in plaintext in `.e2e/run/approve*.log` and `.e2e/testnet/approve*.log`:
+
+```
+  witness = 0x<64 hex characters, the first 32 bytes of which are the member's nsk>…
+```
+
+The real line is not reproduced here, and that is not squeamishness: writing this entry is how
+**PF-16 caught its author**. The first draft quoted the actual value from the run, the check failed
+the submission, and the key came back out. A rule that only catches other people is not a rule.
+
+Two things made it worse than a stray file. `docs/video-transcript.md` asks for the unedited run
+log to be published next to the recording, so the path from "good evidence practice" to "a spending
+key committed to the submission repository" was one `git add -f` long. And the progress line the
+demo prints every minute is a `tail -n 1` of that same log — on screen, in a recording, truncated
+to eighty characters, which is longer than the key.
+
+This project already runs a CI check asserting the Basecamp UI cannot persist the witness. The leak
+arrived from the other side, in our own scripts, and `limitations.md` §10b positively asserted the
+opposite: *"the key never reaches the chain, the store or a log"*.
+
+Fixed in three places, because one would have been the same mistake again: the scripts redact the
+witness from the log the moment the approval finishes and before anything tails it; the heartbeat
+refuses to echo a line containing one; and preflight **PF-16** fails the submission if any tracked
+file carries a witness. The existing logs on disk were redacted too. The check was mutation-tested
+by planting a real key in a tracked file and confirming it failed.
+
+**What it cost to find:** nothing but reading a file before publishing it. **What it would have cost
+not to:** the one secret this entire prize is about, in public, in the repository submitted to win it.

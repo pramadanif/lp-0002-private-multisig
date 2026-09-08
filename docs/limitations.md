@@ -158,9 +158,22 @@ clear it — so it is overridable, and says so in the message.
 
 `pmsig approve --member <hex>` puts a member's nullifier secret key in the process's argument list,
 where `ps` shows it to every other process on the machine, and where the shell records it in
-history. Nothing about the protocol leaks there — the key never reaches the chain, the store or a
-log — but the machine running the client is not a private place, and for a tool about not revealing
+history. The machine running the client is not a private place, and for a tool about not revealing
 which member acted that is worth stating rather than assuming.
+
+This section used to add "the key never reaches the chain, the store or a log". **The last of those
+was false.** The SPEL CLI echoes the arguments it is given, and dumps the serialised instruction
+data — and both approve scripts redirected that into a run log, so `nsk` sat in plaintext in
+`.e2e/run/approve*.log` and `.e2e/testnet/approve*.log`. Those directories are ignored by git, but
+[video-transcript.md](video-transcript.md) asks for a run log to be published beside the recording,
+which put one `git add -f` between a helpful habit and a spending key in the submission repository.
+The heartbeat line that goes on screen during a recording also tailed that same log.
+
+Fixed in three places rather than one: both scripts redact the witness from the log as soon as the
+approval finishes and before anything reads it back, the heartbeat refuses to echo a line
+containing one, and preflight check **PF-16** fails the submission if any *tracked* file carries an
+approval witness — mutation-tested by planting one and watching it fail. The key still reaches the
+argument list, which is what this section is about.
 
 `--member-file` reads the key from a file instead and is the better default; `--member` still works
 and warns. Neither is a substitute for a real key store, which this client does not have: it is a

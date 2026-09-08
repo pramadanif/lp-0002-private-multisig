@@ -91,6 +91,25 @@ require_free_ram() {
        the usual culprits) and re-run. To proceed anyway: PMSIG_MIN_FREE_GB=0"
   fi
 }
+# The SPEL CLI echoes every argument it was given, and the approval's `witness` is the member's
+# ApprovalWitness — whose first field is `nsk`, their nullifier secret key. It also dumps the
+# serialised instruction data, which embeds the same bytes. Both land in this run's log, which sits
+# under .e2e/ next to the evidence a submission is built from. Same helper as
+# scripts/e2e-local-sequencer.sh, for the same reason: keep the log, cut the secret out of it.
+redact_witness() {
+  local f="$1"
+  [[ -f "$f" ]] || return 0
+  local marker='<redacted: the member'"'"'s nullifier secret key>'
+  sed -i '' -E \
+    -e "s/(witness[[:space:]]*[=:][[:space:]]*)0x[0-9a-fA-F]+/\1$marker/g" \
+    -e "s/^([[:space:]]*Serialized instruction data.*)$/\1 $marker/" \
+    -e "s/^[[:space:]]*\[[0-9a-f]{8},.*$/    $marker/" \
+    "$f" 2>/dev/null || return 0
+  grep -qE 'witness[[:space:]]*[=:][[:space:]]*0x' "$f" \
+    && die "failed to redact the witness from $f — refusing to leave a spending key in a log"
+  return 0
+}
+
 log() { printf '\n==> %s\n' "$*"; }
 info() { printf '    %s\n' "$*"; }
 
@@ -452,7 +471,11 @@ require_free_ram
     info "    … ${hb_min} min${hb_rss:+, r0vm ${hb_rss}}"
   done
 
-  wait "$spel_pid" \
+  approve_rc=0
+  wait "$spel_pid" || approve_rc=$?
+  # Before anything reads it back to a terminal, a log, or a reviewer.
+  redact_witness "$OUT/approve$i.log"
+  (( approve_rc == 0 )) \
     || { tail -25 "$OUT/approve$i.log" >&2; die "approval $((i+1)) failed"; }
   grep -q 'confirmed' "$OUT/approve$i.log" || die "approval $((i+1)) was not confirmed"
   tx=$(awk '/tx_hash/{print $2; exit}' "$OUT/approve$i.log")

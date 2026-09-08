@@ -31,6 +31,30 @@ SEQ_URL="http://127.0.0.1:3040"
 SEQ_LOG="$RUN_DIR/sequencer.log"
 SEQ_PID=""
 
+# The SPEL CLI echoes every argument it was given, and the approval's `witness` is the member's
+# ApprovalWitness — whose first field is `nsk`, their nullifier secret key. It also dumps the
+# serialised instruction data, which embeds the same bytes. Both land in this run's log file, and
+# docs/video-transcript.md asks the operator to publish a run log next to the recording. A spending
+# key committed to the submission repository would be the exact failure this project runs a CI check
+# about, arrived at from the other side.
+#
+# The log is still worth keeping — it carries the dev-mode banner, the timings and the tx hash — so
+# the secret is cut out of it rather than the file being thrown away.
+redact_witness() {
+  local f="$1"
+  [[ -f "$f" ]] || return 0
+  local marker='<redacted: the member'"'"'s nullifier secret key>'
+  # `witness = 0x…` (parsed args), `witness: 0x…` (the instruction dump), and the raw word dump.
+  sed -i '' -E \
+    -e "s/(witness[[:space:]]*[=:][[:space:]]*)0x[0-9a-fA-F]+/\1$marker/g" \
+    -e "s/^([[:space:]]*Serialized instruction data.*)$/\1 $marker/" \
+    -e "s/^[[:space:]]*\[[0-9a-f]{8},.*$/    $marker/" \
+    "$f" 2>/dev/null || return 0
+  grep -qE 'witness[[:space:]]*[=:][[:space:]]*0x' "$f" \
+    && die "failed to redact the witness from $f — refusing to leave a spending key in a log"
+  return 0
+}
+
 log()  { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 info() { printf '    %s\n' "$*"; }
 die()  { printf '\n\033[1;31mFATAL: %s\033[0m\n' "$*" >&2; exit 1; }
@@ -524,11 +548,18 @@ require_free_ram
     hb_min=$(( ($(date +%s) - started) / 60 ))
     hb_rss=$(ps -A -o rss=,comm= 2>/dev/null \
              | awk '/r0vm/ {s += $1} END {if (s > 0) printf "%.1f GB", s/1048576}')
-    hb_last=$(tail -n 1 "$RUN_DIR/approve$i.log" 2>/dev/null | tr -d '\r' | cut -c1-80)
+    # This line goes on screen, and the demo is recorded. The witness must never be the line it
+    # happens to catch.
+    hb_last=$(tail -n 1 "$RUN_DIR/approve$i.log" 2>/dev/null | tr -d '\r' \
+              | grep -vE 'witness|^[[:space:]]*\[[0-9a-f]{8},' | cut -c1-80)
     info "    … ${hb_min} min${hb_rss:+, r0vm ${hb_rss}}${hb_last:+ — ${hb_last}}"
   done
 
-  wait "$spel_pid" \
+  approve_rc=0
+  wait "$spel_pid" || approve_rc=$?
+  # Before anything reads it back to a terminal, a log, or a reviewer.
+  redact_witness "$RUN_DIR/approve$i.log"
+  (( approve_rc == 0 )) \
     || { tail -25 "$RUN_DIR/approve$i.log" >&2; die "approval $((i+1)) failed"; }
   grep -q 'confirmed' "$RUN_DIR/approve$i.log" || die "approval $((i+1)) was not confirmed"
   info "approval $((i+1)) confirmed in $(( ($(date +%s)-started)/60 )) min"
