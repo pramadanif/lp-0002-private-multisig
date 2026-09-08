@@ -95,9 +95,26 @@ else
   fail=1
 fi
 
-# 5. The witness field should at least be marked as sensitive to the user.
-if grep -q 'approve_witnessf' "$QML" && ! grep -qiE 'secret|sensitive|never shared|do not share' "$QML"; then
-  echo "  WARN  the witness field is not labelled as secret in the UI"
+# 5. The module must not be able to submit an approval at all.
+#
+# The generated C ABI builds every instruction into a PublicTransaction. For `approve` that would
+# broadcast the witness — the member's own nullifier secret key — in the clear, to a program that
+# has no public approve path to accept it. A rejected transaction is broadcast all the same. So the
+# backend must not call the FFI's approve, and the UI must not collect a witness to hand it.
+# The `extern "C"` declaration stays — the ABI is generated whole, and build-basecamp.sh checks
+# every symbol in it is exported. What must not exist is a *call*.
+if grep -qE 'callFfi\([[:space:]]*private_multisig_approve' "$BACKEND"; then
+  echo "  FAIL  the backend calls the FFI's approve, which would publish the witness" >&2
+  fail=1
+else
+  echo "  OK    the module cannot submit an approval (it would be a public transaction)"
+fi
+
+if grep -q 'approve_witnessf' "$QML"; then
+  echo "  FAIL  the UI still has a witness input; there is nothing here that can safely consume it" >&2
+  fail=1
+else
+  echo "  OK    the UI asks for no witness"
 fi
 
 echo

@@ -222,20 +222,28 @@ void PrivateMultisigBackend::createProposal(const QString& proposerId, const QSt
     });
 }
 
-void PrivateMultisigBackend::approve(const QString& configHash, const QString& proposalSeed, const QString& memberRoot, const QString& claimedNullifier, const QVariantList& witness) {
-    QJsonObject args = baseArgs();
-    args["config_hash"] = configHash;
-    args["proposal_seed"] = proposalSeed;
-    args["member_root"] = memberRoot;
-    args["claimed_nullifier"] = claimedNullifier;
-    {
-        QJsonArray _arr;
-        for (const QVariant& _v : witness) _arr.append(QJsonValue::fromVariant(_v));
-        args["witness"] = _arr;
-    }
-    dispatchFfi("approve", [this, args]() {
-        return callFfi(private_multisig_approve, args);
-    });
+// This module cannot submit an approval, and must not try.
+//
+// The generated C ABI builds every instruction into a `PublicTransaction`. That is right for
+// create, propose and execute, which are public by design. It is wrong for `approve` twice over:
+// the program has no public approve path, so the chain would reject it — and the witness this
+// panel would carry is the member's own secret material. Broadcasting it publicly is the exact
+// failure this prize is about, and a rejected transaction is broadcast all the same.
+//
+// An approval is a privacy-preserving transaction whose validity depends on LEZ's circuit
+// verifying the multisig program and the chained membership program. Producing one takes the
+// prover, not a thin client: see `crates/sdk/examples/wallet_member.rs`. So this refuses, and says
+// what to run instead, rather than leaving a button that leaks.
+void PrivateMultisigBackend::approve(const QString&, const QString&, const QString&, const QString&,
+                                     const QVariantList&) {
+    m_lastError = QStringLiteral(
+        "This module cannot submit approvals. An approval is a privacy-preserving transaction — the "
+        "proof takes about 20 minutes and the witness is the member's secret material, which a "
+        "public transaction would publish. Produce it with the SDK instead:\n\n"
+        "    cargo run --release --example wallet_member -- approve\n\n"
+        "The panels here read the result back from the chain once it lands.");
+    emit lastErrorChanged();
+    emit operationError(QStringLiteral("approve"), m_lastError);
 }
 
 void PrivateMultisigBackend::execute(const QString& configHash, const QString& proposalSeed) {
