@@ -78,10 +78,25 @@ if [[ -f docs/DEPLOYMENT.md ]]; then
   approvals=0
   while read -r tx; do
     [[ -n "$tx" ]] || continue
+    # getTransaction returns [base64(borsh(transaction)), block], with no variant named in text —
+    # grepping the JSON for "PrivacyPreserving" therefore matched nothing and classified every
+    # transaction as unknown. The variant is the first byte of the decoded transaction.
+    #
+    # Established by observation rather than read from an enum: across this deployment's own
+    # transactions, 0x00 is carried by create_multisig (653 B) and execute (549 B), 0x01 by an
+    # approval (272 KB, which is the proof), and 0x02 by a program deployment (393 KB). Three
+    # discriminants, three kinds we submitted ourselves and can therefore name independently.
     variant=$(curl -s -X POST "$RPC" -H 'content-type: application/json' \
       --data "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$tx\"]}" \
-      --max-time 20 | grep -oE 'PrivacyPreserving|Public' | head -1)
-    printf '    %s  %s\n' "${variant:-unknown}" "${tx:0:16}…"
+      --max-time 90 2>/dev/null | python3 -c "
+import sys, json, base64
+try:
+    r = json.load(sys.stdin).get('result')
+    raw = base64.b64decode(r[0])
+except Exception:
+    print('unknown'); raise SystemExit
+print({0: 'Public', 1: 'PrivacyPreserving', 2: 'Deployment'}.get(raw[0], f'unknown(0x{raw[0]:02x})'))
+" 2>/dev/null || true)
     [[ "$variant" == "PrivacyPreserving" ]] && approvals=$((approvals+1))
   done < <(grep -oE '/transaction/[0-9a-f]{64}' docs/DEPLOYMENT.md | sed 's|/transaction/||' | sort -u)
 
