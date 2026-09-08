@@ -178,6 +178,14 @@ elif [[ ! -s docs/DEPLOYMENT.md ]]; then
   pend "PF-10" "verify-onchain.sh exists but nothing is deployed yet (Phase G)"
 elif scripts/verify-onchain.sh >/dev/null 2>&1; then
   ok "PF-10" "verify-onchain.sh exits 0 against the published deployment"
+# A node that is not answering is not a verification that disagreed with the chain. Reporting FAIL
+# here would say our deployment is wrong on the strength of somebody else's outage — the same
+# mistake check-explorer-links.sh made. Unreachable is PENDING; reachable and disagreeing is FAIL.
+elif ! curl -s -X POST "${PMSIG_RPC:-https://testnet.lez.logos.co}" \
+       -H 'content-type: application/json' \
+       --data '{"jsonrpc":"2.0","id":1,"method":"checkHealth","params":[]}' \
+       --max-time 20 2>/dev/null | grep -q '"result"'; then
+  pend "PF-10" "the testnet node is not answering, so verification could not run — re-run before opening the PR"
 else
   bad "PF-10" "verify-onchain.sh exited non-zero against the published deployment"
 fi
