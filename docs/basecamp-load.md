@@ -1,6 +1,6 @@
 # Loading the module in Logos Basecamp
 
-`app/private_multisig.lgx` — 2622557 bytes, sha256 `1ad7018313cc7702d197c074276cfba2d78c1c5a5741c87a850e6dec2b4b943e`, variant **darwin-arm64**.
+`app/private_multisig.lgx` — 2637016 bytes, sha256 `c5cb15eb38190bcedfe657b3b6bc6dd339adce2dc44e7afa9bc0d58c8c06c217`, variant **darwin-arm64**.
 
 Verify what you downloaded before installing it:
 
@@ -25,6 +25,21 @@ Installed files land in:
 ```
 ~/Library/Application Support/Logos/LogosBasecamp/plugins/private_multisig/
 ```
+
+## Why an earlier package installed but never appeared
+
+The metadata has to be written into the manifest **before** `lgx add`, not after. `lgx create`
+leaves a skeleton with no hashes; `lgx add` computes `hashes.root` over whatever the manifest says
+at that moment. An earlier build edited the manifest afterwards, so the recorded root hash described
+a file that no longer existed.
+
+Basecamp only checks it on the `ui_qml` install path — which is why the very first package, whose
+`type` was empty, installed happily and then sat there with Type "-": Basecamp never took that path.
+Setting the type correctly took the path, the hash did not match, and the install failed with no
+message at all. The log shows `installPlugin` being called and then nothing — no error, no
+"UI plugin file installed".
+
+`scripts/build-basecamp.sh` now patches the manifest between `create` and `add`.
 
 ## If Type shows "-"
 

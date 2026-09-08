@@ -106,8 +106,8 @@ as evidence anywhere.
 | | |
 |-|-|
 | Basecamp module | [`app/private_multisig.lgx`](../app/private_multisig.lgx) |
-| Size | 2,622,557 bytes |
-| sha256 | `1ad7018313cc7702d197c074276cfba2d78c1c5a5741c87a850e6dec2b4b943e` |
+| Size | 2,637,016 bytes |
+| sha256 | `c5cb15eb38190bcedfe657b3b6bc6dd339adce2dc44e7afa9bc0d58c8c06c217` |
 | Variant | `darwin-arm64` (built on the machine that produced it — [limitations](limitations.md)) |
 | Install steps | [basecamp-load.md](basecamp-load.md) |
 
@@ -144,7 +144,7 @@ Listed first-class, because the difference between built and demonstrated is wha
 test:
 
 - **The Basecamp module has not been shown loading in Basecamp.** `app/private_multisig.lgx` is
-  built and committed — 2,622,557 bytes, sha256 `1ad70183…b4b943e`, `lgx verify` reports the
+  built and committed — 2,637,016 bytes, sha256 `1ad70183…b4b943e`, `lgx verify` reports the
   structure valid, and it contains the C ABI library the UI's thirteen `extern "C"` functions call,
   with every symbol checked before packaging. But `lgx verify` tests structure, not loading, and the
   criterion asks for a module that loads. The package also carries only the `darwin-arm64` variant,

@@ -166,6 +166,15 @@ cp "app/lib/libpmsig_ffi.$LIBEXT" app/.lgx-staging/ \
 # `lgx create` refuses to overwrite, so a second run would fail on the package the first one left.
 rm -f app/private_multisig.lgx
 ( cd app && lgx create private_multisig ) || die "lgx create failed"
+
+# The metadata has to go in *before* `lgx add`, not after. `lgx create` writes a skeleton with no
+# hashes; `lgx add` computes them over whatever the manifest then says. Editing the manifest
+# afterwards leaves `hashes.root` describing a file that no longer exists, and Basecamp rejects the
+# package on the ui_qml install path — silently: it logs `installPlugin` and then nothing at all.
+# The previous package escaped that only because its `type` was empty, so Basecamp never took the
+# UI path; it installed, showed Type "-", and never reached Applications.
+python3 scripts/patch_lgx_manifest.py app/private_multisig.lgx app/manifest.json \
+  || die "merging the manifest metadata failed"
 # --icon is required for a ui_qml package and is what fills the icon Basecamp shows; without it the
 # installed manifest carried an empty icon, and the manifest pointed at an icon.svg that was never
 # in the package.
@@ -182,10 +191,6 @@ if (w, h) != (256, 256): sys.exit(f'icon must be exactly 256x256, is {w}x{h}')
 lgx add app/private_multisig.lgx --variant "$VARIANT" --files app/.lgx-staging \
   --main "$PLUGIN_NAME" --view qml/Main.qml --icon app/assets/icon.png -y || die "lgx add failed"
 info "variant $VARIANT packaged"
-# Not silenced: if the metadata cannot be merged, the package ships without an author or a licence
-# and nothing says so.
-python3 scripts/patch_lgx_manifest.py app/private_multisig.lgx app/manifest.json \
-  || die "merging the manifest metadata failed"
 lgx verify app/private_multisig.lgx || die "lgx verify failed"
 rm -rf app/.lgx-staging
 
