@@ -44,6 +44,11 @@ echo "check-basecamp-privacy.sh"
 fail=0
 
 # 1. The witness must never be history-saved.
+#
+# The rewritten UI has no per-field history at all — and no witness input either, so this and the
+# check below both pass with nothing to find. They are kept because `--regen` puts the generated
+# scaffold back, history and witness field included, and the point of this file is that a
+# regeneration cannot quietly reintroduce the leak.
 if grep -q 'saveHistory("approve_witness' "$QML"; then
   echo "  FAIL  the approval witness is saved to field history — that is a spending key on disk" >&2
   fail=1
