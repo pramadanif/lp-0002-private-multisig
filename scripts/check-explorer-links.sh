@@ -69,11 +69,30 @@ chain_has() {
   return 1
 }
 
+# If the chain cannot be reached at all, every transaction below would look absent — and absence of
+# evidence is not evidence of absence. Declaring the links dead because the node is down would fail
+# a branch over somebody else's outage, and would be a false statement about our own deployment.
+rpc_up=0
+if curl -s -X POST "$RPC_FOR_INDEX" -H 'content-type: application/json' \
+     --data '{"jsonrpc":"2.0","id":1,"method":"checkHealth","params":[]}' --max-time 20 2>/dev/null \
+     | grep -q '"result"'; then
+  rpc_up=1
+else
+  echo "  NOTE: $RPC_FOR_INDEX is not answering — transaction links cannot be checked against the"
+  echo "        chain right now, so an unindexed one cannot be told from a missing one."
+fi
+
 fail=0
 for url in "${urls[@]}"; do
   # A JSON-RPC endpoint is not a web page. It answers POST and refuses GET with 405, which is the
   # endpoint working, not a dead link — and this URL is in DEPLOYMENT.md precisely so a reader can
   # query it. Ask it the way it expects to be asked.
+  # The node being down is not our submission being broken, and it is already reported above.
+  if [[ "$url" == "$RPC_FOR_INDEX" ]] && (( rpc_up == 0 )); then
+    printf '  UNKNOWN %s\n          the node is not answering; its health is the operator'"'"'s, not this evidence'"'"'s\n' "$url"
+    pending=$((pending + 1))
+    continue
+  fi
   if [[ "$url" != */transaction/* && "$url" != */account/* ]] \
      && curl -s -X POST "$url" -H 'content-type: application/json' \
           --data '{"jsonrpc":"2.0","id":1,"method":"checkHealth","params":[]}' \
@@ -94,7 +113,10 @@ for url in "${urls[@]}"; do
     printf '  OK   %s\n' "$url"
   elif [[ $body_says_missing -eq 1 ]]; then
     hash=${url##*/}
-    if [[ "$url" == *"/transaction/"* ]] && chain_has "$hash"; then
+    if [[ "$url" == *"/transaction/"* ]] && (( rpc_up == 0 )); then
+      printf '  UNKNOWN %s\n          the explorer has not indexed it and the node cannot be asked\n' "$url"
+      pending=$((pending + 1))
+    elif [[ "$url" == *"/transaction/"* ]] && chain_has "$hash"; then
       printf '  WAIT %s\n       the sequencer has this transaction; the explorer has not indexed it yet\n' "$url"
       pending=$((pending + 1))
     else
@@ -114,9 +136,16 @@ if (( fail )); then
   exit 1
 fi
 if (( pending )); then
-  echo "$((${#urls[@]} - pending)) of ${#urls[@]} evidence URLs resolve; $pending are on chain but not yet"
-  echo "indexed by the explorer. Re-run this before opening the PR — the links must render for a"
-  echo "reviewer, and a submission is not finished while any of them still says WAIT."
+  echo "$((${#urls[@]} - pending)) of ${#urls[@]} evidence URLs resolve."
+  if (( rpc_up )); then
+    echo "$pending are on chain but the explorer has not indexed them yet."
+  else
+    # Do not claim they are on chain: with the node down that cannot be checked right now.
+    echo "$pending could not be checked at all — the explorer has not indexed them and the node is"
+    echo "not answering, so this run cannot tell an unindexed transaction from a missing one."
+  fi
+  echo "Re-run this before opening the PR — the links must render for a reviewer, and a submission"
+  echo "is not finished while any of them is unresolved."
   # Not a pass and not a failure. Exiting 0 here would let preflight report PF-09 green while a
   # reviewer clicking the link still sees an empty page.
   exit 75
