@@ -61,14 +61,14 @@ present, and a video.** Substance beyond that was never the deciding factor for 
 
 | Killer | Our status | Note |
 |--------|-----------|------|
-| CI runs real LEZ sequencer e2e, green | ◐ **wired, not yet green** | `e2e-sequencer` runs on every push to `main`, not on cron and not path-filtered (the shape #125 was pulled up for). It has not completed a run, so nothing is claimed. The earlier reasoning here — that the job should stay absent because a failing job is not evidence — was backwards: the job is what tells you whether the script passes, and keeping it out hid three real defects. This is still our **largest** gap and matches the **#1** rejection cause |
-| Testnet evidence, live explorer links | ⛔ **nothing deployed** | Funding is solved (`fund-testnet.sh`); deployment is not |
+| CI runs real LEZ sequencer e2e, green | ✅ **green** | Run 34052567273, 3 h 41 m. `e2e-sequencer` runs on every push to `main`, not on cron and not path-filtered (the shape #125 was pulled up for). It has not completed a run, so nothing is claimed. The earlier reasoning here — that the job should stay absent because a failing job is not evidence — was backwards: the job is what tells you whether the script passes, and keeping it out hid three real defects. This is still our **largest** gap and matches the **#1** rejection cause |
+| Testnet evidence, live explorer links | ✅ **deployed and verified** | Full lifecycle on the public testnet, blocks 43002–43065; `verify-onchain.sh` passes from public data alone. Explorer links resolve once the node recovers and its index catches up. Was: funding is solved (`fund-testnet.sh`); deployment is not |
 | CU cost | ◐ **partial** | Client proving measured (602,662 cycles; 116 s; composed ≈19 min). On-chain per-instruction figures need testnet |
 | `demo.sh` genuinely DEV_MODE=0 | ◐ | Set at the entrypoint, never in a child. `check-dev-mode-clobber.sh` enforces exactly the #97 failure, and is mutation-tested. But the script has not completed an unattended run |
 | Narrated video | ⛔ | Human gate. Shot list ready |
 | Derivation-only binding (#91) | ✅ | In-circuit live-account binding, **mutation-tested**: removing the assertion fails 3 tests |
 | Partial-approval resume (#91) | ✅ | 9 store tests; each CLI command is its own process, so the restart is real |
-| Basecamp downloadable (#91) | ⛔ | Module generated and hardened; needs Qt6 + `lgx` to package |
+| Basecamp downloadable (#91) | ◐ | `app/private_multisig.lgx` built and committed, `lgx verify` valid. Not yet shown loading; one variant only |
 | Execute carries no proof (#131) | ✅ | Different situation — see §5 |
 | Multisig-domain transactions (#131) | ◐ | create/propose/approve exist **locally**; not yet on testnet |
 | README complete | ◐ | Honest about status; missing deploy steps and Basecamp walkthrough |

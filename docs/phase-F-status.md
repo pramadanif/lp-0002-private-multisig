@@ -10,10 +10,10 @@ Abort check at phase start: #125 `reviewDecision` empty; merged LP-0002 PRs → 
 
 | SC | Requirement | Status | Evidence |
 |----|-------------|--------|----------|
-| **SC-F.1** | README build/load instructions work (**P-U2**) | ⛔ | Instructions exist in `scripts/build-basecamp.sh`, but nobody has run them to completion, so they are unverified |
-| **SC-F.2** | Release assets downloadable (**H10**) | ⛔ | No `.lgx` built — the `lgx` tool is not installed |
-| **SC-F.3** | SHA256SUMS match downloaded bytes | ⛔ | Nothing to hash yet |
-| **SC-F.4** | `lgx verify` / ui-host READY recorded | ⛔ | `lgx` not installed |
+| **SC-F.1** | README build/load instructions work (**P-U2**) | ✅ | `./scripts/build-basecamp.sh` builds the C ABI library, the Qt plugin and the package end to end; it refuses to package if any symbol the UI calls is missing. Was: nobody has run them to completion, so they are unverified |
+| **SC-F.2** | Release assets downloadable (**H10**) | ✅ | `app/private_multisig.lgx`, committed, 2,605,557 bytes |
+| **SC-F.3** | SHA256SUMS match downloaded bytes | ✅ | sha256 `785eb121a16e12b6bda27bd7514dfd2c3c32051d1adc213c0205aa2ac40746ad` |
+| **SC-F.4** | `lgx verify` / ui-host READY recorded | ◐ | `lgx verify` reports the structure valid. **Not** shown loading in Basecamp, and only the `darwin-arm64` variant is packaged |
 | **SC-F.5** | `module.json` / metadata present, no validator warning | ✅ | `app/manifest.json` — every required field populated, **6** platform targets. See "the manifest was a trap" below |
 | **SC-F.6** | GUI shows threshold progress **without** other members' account ids | ✅ | `scripts/check-basecamp-privacy.sh` — enforced and mutation-tested, not merely observed |
 | **SC-F.7** | Release notes carry `.lgx` SHA-256 + byte size (**W12**) | ⛔ | No package yet |
