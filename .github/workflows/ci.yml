@@ -26,6 +26,12 @@ jobs:
       - uses: actions/checkout@v4
 
       # rust-toolchain.toml pins 1.94.0 to match logos-execution-zone v0.2.4.
+      # crates/basecamp-ffi depends on the LEZ wallet, which links pcsc-sys (smartcard support) and
+      # needs libpcsclite at build time. Adding that crate to the workspace put it inside
+      # `cargo clippy --workspace`, and this job started failing on a library it had never needed.
+      - name: Install libpcsclite (the wallet links pcsc-sys)
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libpcsclite-dev
+
       - name: Install Rust toolchain
         run: |
           rustup show active-toolchain || rustup toolchain install
@@ -183,8 +189,21 @@ jobs:
       # matters most: the testnet is wiped periodically, so evidence links rot on their own.
       # Preflight PF-09/PF-10 stay PENDING meanwhile, so a green job here cannot be mistaken for
       # readiness.
+      # Exit 75 means every transaction is on the chain but the explorer has not indexed it yet —
+      # which is the ordinary state for minutes to hours after a deployment, and while the testnet
+      # node is down. That is not a broken submission and must not fail the branch; preflight
+      # reports it PENDING, which is where it belongs. A genuinely dead link still exits 1.
       - name: check-explorer-links.sh
-        run: ./scripts/check-explorer-links.sh
+        run: |
+          set +e
+          ./scripts/check-explorer-links.sh
+          status=$?
+          set -e
+          if [ "$status" -eq 75 ]; then
+            echo "::notice::evidence is on chain but not yet indexed by the explorer — re-run before opening the PR"
+            exit 0
+          fi
+          exit "$status"
 
   basecamp-privacy:
     name: Basecamp UI must not leak member secrets
