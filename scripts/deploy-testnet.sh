@@ -328,9 +328,22 @@ if [[ "${PMSIG_RESUME:-0}" == "1" ]]; then
   info "payee $PAYEE"
 else
   log "creating the payee account"
+  # Take the account this run created, by comparing the list before and after. Picking "the first
+  # public account that is not the payer" was right only while the wallet held two: a wallet that
+  # has deployed before holds the payer plus every previous payee, and that expression then returns
+  # an *older* payee — which is already initialised, so `auth-transfer init` submits a transaction
+  # the chain will never include, and the run waits for a confirmation that cannot come. That is
+  # exactly how this stalled once, ten minutes into a run whose multisig was already funded.
+  before=$("$WALLET" account list 2>/dev/null | awk '/Public\//{print $2}' | sort)
   "$WALLET" account new public > "$OUT/payee.log" 2>&1 || die "could not create the payee account"
-  PAYEE=$("$WALLET" account list 2>/dev/null | awk '/Public\//{print $2}' | grep -v "^${CREATOR}$" | head -1)
-  [[ -n "$PAYEE" ]] || die "no second public account after creating one — see $OUT/payee.log"
+  after=$("$WALLET" account list 2>/dev/null | awk '/Public\//{print $2}' | sort)
+  PAYEE=$(comm -13 <(printf '%s\n' "$before") <(printf '%s\n' "$after") | head -1)
+  [[ -n "$PAYEE" ]] \
+    || die "\`account new public\` reported success but the wallet has no new public account.
+       Before: $(printf '%s ' "$before")
+       After:  $(printf '%s ' "$after")
+       See $OUT/payee.log"
+  [[ "$PAYEE" != "$CREATOR" ]] || die "the new payee came back as the payer — refusing to pay the multisig's own funder"
   "$WALLET" auth-transfer init --account-id "$PAYEE" > "$OUT/payee-init.log" 2>&1 || true
   grep -q 'included in block' "$OUT/payee-init.log" \
     || { tail -5 "$OUT/payee-init.log" >&2; die "could not initialise the payee account"; }
