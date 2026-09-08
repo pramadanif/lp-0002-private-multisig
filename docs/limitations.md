@@ -77,6 +77,35 @@ member's account state. A member therefore needs a live shielded account, and ca
 approvals from the same account state. The SDK sequences this; it is a real constraint on a member
 who wants to approve several proposals at once.
 
+## 8b. A member's account must be claimed before it is ever synced
+
+A shielded account is created wholly default, with `nonce: 0`. In that state any program may return
+it, and `auth-transfer init` may claim it. `wallet account sync-private` gives it a random nonce,
+and from that moment three of LEZ's execution rules close on it: the nonce may not change (3), the
+program owner may not change (4), and a post-state with the default owner requires the pre-state to
+have been wholly default (7). An account that is unowned *and* non-default satisfies none of them.
+
+Such an account can no longer approve — the privacy circuit rejects the whole execution with
+`NonDefaultAccountWithDefaultOwner` — and it can no longer be claimed either, because
+`initialize_account` asserts the account is untouched. It is finished, permanently.
+
+**So the order matters, and it is not recoverable:**
+
+```bash
+wallet account new private                            # nonce 0
+wallet auth-transfer init --account-id Private/<id>   # claim it FIRST (~5 min: this is itself a
+                                                      # privacy-preserving transaction)
+wallet account sync-private                           # only then
+```
+
+Once claimed, the owner is not default and rule 7 can never apply to it again, whatever the nonce
+becomes.
+
+This does not arise on a standalone sequencer, because the demo wipes the chain before every run and
+never syncs — an approver there keeps `nonce: 0` and stays claimable forever. It was found on the
+public testnet, where two accounts were synced before being claimed and are now permanently unusable
+as members. `docs/lez-admission-rules.md` carries the diagnosis.
+
 ## 9. Dependency pins that are not releases
 
 - **SPEL** is pinned to `main` at commit `5126b7ed8a9b`, **not** the v0.6.0 release. The release pins
