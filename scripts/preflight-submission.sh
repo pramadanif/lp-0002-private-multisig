@@ -282,8 +282,11 @@ fi
 # tracked file anyway. docs/video-transcript.md asks for a run log to be published beside the
 # recording, so the path from "helpful evidence" to "a spending key in the submission repository" is
 # one `git add -f` long.
+# Two shapes, because the CLI prints the same bytes twice: the parsed argument, and the serialised
+# instruction data as a list of u32 words. A log pasted in without the first would still carry the
+# key in the second.
 witness_leaks=$(git ls-files -z 2>/dev/null \
-  | xargs -0 grep -lE 'witness[[:space:]]*[=:][[:space:]]*0x[0-9a-fA-F]{32,}' 2>/dev/null || true)
+  | xargs -0 grep -lE 'witness[[:space:]]*[=:][[:space:]]*0x[0-9a-fA-F]{32,}|^[[:space:]]*\[[0-9a-f]{8}, [0-9a-f]{8}, [0-9a-f]{8},' 2>/dev/null || true)
 if [[ -n "$witness_leaks" ]]; then
   bad "PF-16" "a tracked file contains an approval witness — that is a spending key: $witness_leaks"
 else
