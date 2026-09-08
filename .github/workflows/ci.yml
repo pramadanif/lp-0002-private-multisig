@@ -43,7 +43,12 @@ jobs:
       # The guest tests run real zkVM sessions, so the prover must actually be present. Without it
       # every negative test still passes — "prover not found" is an Err just like a guest rejection —
       # which is precisely the hollow green this project exists to avoid.
+      # rzup resolves releases through api.github.com. Unauthenticated, a shared runner shares the
+      # 60-requests-an-hour pool with everyone else on that IP, and the job dies on "API rate limit
+      # exceeded" having compiled nothing. GITHUB_TOKEN lifts it to 1,000/hour for this repo.
       - name: Install risc0 toolchain (r0vm)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           curl -L https://risczero.com/install | bash
           echo "$HOME/.risc0/bin" >> "$GITHUB_PATH"
@@ -112,7 +117,10 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      # Same rate limit as the job above, same fix.
       - name: Install risc0 toolchain (r0vm + the guest Rust toolchain)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           curl -L https://risczero.com/install | bash
           echo "$HOME/.risc0/bin" >> "$GITHUB_PATH"

@@ -166,8 +166,21 @@ cp "app/lib/libpmsig_ffi.$LIBEXT" app/.lgx-staging/ \
 # `lgx create` refuses to overwrite, so a second run would fail on the package the first one left.
 rm -f app/private_multisig.lgx
 ( cd app && lgx create private_multisig ) || die "lgx create failed"
+# --icon is required for a ui_qml package and is what fills the icon Basecamp shows; without it the
+# installed manifest carried an empty icon, and the manifest pointed at an icon.svg that was never
+# in the package.
+[[ -s app/assets/icon.png ]] || die "app/assets/icon.png is missing — a ui_qml package needs a 256x256 PNG icon"
+python3 -c "
+from struct import unpack
+import sys
+d = open('app/assets/icon.png','rb').read()
+if d[:8] != b'\x89PNG\r\n\x1a\n': sys.exit('not a PNG')
+w, h = unpack('>II', d[16:24])
+if (w, h) != (256, 256): sys.exit(f'icon must be exactly 256x256, is {w}x{h}')
+" || die "app/assets/icon.png is not a 256x256 PNG"
+
 lgx add app/private_multisig.lgx --variant "$VARIANT" --files app/.lgx-staging \
-  --main "$PLUGIN_NAME" --view qml/Main.qml -y || die "lgx add failed"
+  --main "$PLUGIN_NAME" --view qml/Main.qml --icon app/assets/icon.png -y || die "lgx add failed"
 info "variant $VARIANT packaged"
 # Not silenced: if the metadata cannot be merged, the package ships without an author or a licence
 # and nothing says so.

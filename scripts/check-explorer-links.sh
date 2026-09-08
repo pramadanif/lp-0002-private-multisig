@@ -35,7 +35,11 @@ collect() {
 }
 mapfile_compat urls collect
 
-if (( ${#urls[@]:-0} == 0 )); then
+# bash 3.2 (what macOS ships) errors on ${#urls[@]} for an empty array under `set -u`, and the
+# :-0 form does not rescue it. Count into a plain variable first.
+url_count=0
+[[ ${urls+set} == set ]] && url_count=${#urls[@]}
+if (( url_count == 0 )); then
   echo "FATAL: docs/DEPLOYMENT.md exists but contains no URLs." >&2
   echo "       Phase G must publish explorer links as evidence." >&2
   exit 1
@@ -136,7 +140,7 @@ if (( fail )); then
   exit 1
 fi
 if (( pending )); then
-  echo "$((${#urls[@]} - pending)) of ${#urls[@]} evidence URLs resolve."
+  echo "$((url_count - pending)) of $url_count evidence URLs resolve."
   if (( rpc_up )); then
     echo "$pending are on chain but the explorer has not indexed them yet."
   else
@@ -150,4 +154,4 @@ if (( pending )); then
   # reviewer clicking the link still sees an empty page.
   exit 75
 fi
-echo "All ${#urls[@]} evidence URLs resolve."
+echo "All $url_count evidence URLs resolve."

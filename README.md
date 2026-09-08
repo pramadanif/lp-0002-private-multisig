@@ -231,6 +231,10 @@ pmsig status   --proposal-id <hex>
 
 ### 6. The Basecamp app
 
+Install steps, the package hash, and what to do if Basecamp shows Type "-" are in
+[`docs/basecamp-load.md`](docs/basecamp-load.md).
+
+
 ```bash
 ./scripts/build-basecamp.sh --regen   # regenerate the module from the IDL
 ./scripts/build-basecamp.sh           # build the Qt plugin and package the .lgx

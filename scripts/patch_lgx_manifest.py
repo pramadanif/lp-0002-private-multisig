@@ -35,7 +35,13 @@ def main() -> int:
         return 1
 
     # Everything else in the manifest describes the package's structure and belongs to lgx.
-    DESCRIPTIVE = ("author", "category", "description", "homepage", "license", "version")
+    # `type` and `icon` are in this list because lgx does not set them: an installed package came
+    # back with type "" and icon "", which is why Basecamp showed it with Type "-" and never listed
+    # it among Applications. They describe what the package *is*, not how it is laid out, so filling
+    # them here does not step on lgx's ownership of `main`, the variants or the hashes.
+    DESCRIPTIVE = (
+        "author", "category", "description", "homepage", "license", "version", "type", "icon",
+    )
 
     with gzip.open(lgx_path, "rb") as gz:
         raw = gz.read()
