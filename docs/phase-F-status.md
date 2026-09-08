@@ -49,10 +49,22 @@ So the luck is now an enforced property. `scripts/check-basecamp-privacy.sh` ass
 1. the witness is never history-saved;
 2. the backend never writes it to `QSettings` under any name;
 3. no member-identity field exists in the UI (**SC-F.6**);
-4. the witness field is labelled as secret to the user.
+4. the generated C ABI, which is what actually receives the witness, prints nothing at all and
+   never writes it to a file;
+5. the backend cannot submit an approval — the generated C ABI builds every instruction into a
+   `PublicTransaction`, which for `approve` would broadcast the witness in the clear;
+6. the UI asks for no witness at all. The rewritten interface has no such field, and no per-field
+   history either, so (1) and (6) now pass with nothing to find. They stay because `--regen` puts
+   the generated scaffold back, both included.
 
-**Mutation-tested**: injecting `saveHistory("approve_witnessf", …)` into the QML makes the check fail;
-removing it makes the check pass. A gate that has never failed is not a gate.
+**Mutation-tested**: injecting `saveHistory("approve_witnessf", …)` into the QML makes the check
+fail; adding a `callFfi(private_multisig_approve, …)` back into the backend makes it fail; removing
+each makes it pass. A gate that has never failed is not a gate.
+
+**And the same secret did reach a file, by another road.** On 2026-09-09 the witness was found
+sitting in plaintext in the approve scripts' own run logs — the SPEL CLI echoes the arguments it is
+given. This section was written about a leak that nearly happened in the UI while an identical one
+was happening in the tooling. See [tried-failed.md](tried-failed.md) and preflight **PF-16**.
 
 **Corrected 2026-09-05.** The check began with `if [[ ! -d app ]]; then … exit 0; fi`, which was
 reasonable while Phase F had not run. `app/` is committed now, so its absence means a broken
