@@ -97,6 +97,40 @@ Item {
         return out
     }
 
+    // The decoder renders every 32-byte field the way an address is written — base58 with a
+    // `Public/` prefix — including the ones that are not addresses at all. A config hash shown that
+    // way cannot be compared with the hex the operator typed to fetch it, or with DEPLOYMENT.md.
+    // So hashes are converted back; anything that is not 32 base58 bytes is left exactly as it came.
+    function base58ToHex(value) {
+        var s = String(value === undefined || value === null ? "" : value)
+                    .replace(/^(Public|Private)\//, "")
+        if (s.length === 0) return ""
+        var alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+        var bytes = []
+        for (var i = 0; i < s.length; i++) {
+            var carry = alphabet.indexOf(s.charAt(i))
+            if (carry < 0) return ""
+            for (var j = 0; j < bytes.length; j++) {
+                carry += bytes[j] * 58
+                bytes[j] = carry & 0xff
+                carry = carry >>> 8
+            }
+            while (carry > 0) { bytes.push(carry & 0xff); carry = carry >>> 8 }
+        }
+        for (var k = 0; k < s.length && s.charAt(k) === "1"; k++) bytes.push(0)
+        if (bytes.length !== 32) return ""
+        bytes.reverse()
+        var hex = ""
+        for (var b = 0; b < 32; b++) hex += ("0" + bytes[b].toString(16)).slice(-2)
+        return hex
+    }
+
+    // A hash for display: hex when it is one, otherwise whatever the decoder gave.
+    function hashText(v) {
+        var hex = root.base58ToHex(v)
+        return hex.length > 0 ? hex : root.asText(v)
+    }
+
     function asText(v) {
         if (v === undefined || v === null) return ""
         if (Array.isArray(v)) return v.join(", ")
@@ -118,6 +152,10 @@ Item {
         Layout.fillWidth: true
         Layout.leftMargin: 28
         Layout.rightMargin: 28
+        // A card that runs the full width of a wide pane makes every line hard to track back to
+        // the next one. Cap the measure and keep it left-aligned with the page title.
+        Layout.maximumWidth: 980
+        Layout.alignment: Qt.AlignLeft
         color: root.colSurface
         radius: root.radius
         border.width: 1
@@ -309,6 +347,8 @@ Item {
         Layout.fillWidth: true
         Layout.leftMargin: 28
         Layout.rightMargin: 28
+        Layout.maximumWidth: 980
+        Layout.alignment: Qt.AlignLeft
         spacing: 5
         Text {
             text: header.title
@@ -508,7 +548,7 @@ Item {
                     ColumnLayout {
                         width: configPage.availableWidth
                         spacing: 16
-                        Item { Layout.preferredHeight: 10 }
+                        Item { Layout.preferredHeight: 18 }
 
                         PageHeader {
                             title: "Config"
@@ -568,12 +608,12 @@ Item {
                             KeyRow {
                                 visible: Object.keys(root.cfg()).length > 0
                                 k: "Member root"
-                                v: root.asText(root.cfg()["member_root"])
+                                v: root.hashText(root.cfg()["member_root"])
                             }
                             KeyRow {
                                 visible: Object.keys(root.cfg()).length > 0
                                 k: "Multisig id"
-                                v: root.asText(root.cfg()["multisig_id"])
+                                v: root.hashText(root.cfg()["multisig_id"])
                             }
                             KeyRow {
                                 visible: Object.keys(root.cfg()).length > 0
@@ -606,7 +646,7 @@ Item {
                     ColumnLayout {
                         width: proposalPage.availableWidth
                         spacing: 16
-                        Item { Layout.preferredHeight: 10 }
+                        Item { Layout.preferredHeight: 18 }
 
                         PageHeader {
                             title: "Proposal"
@@ -674,12 +714,12 @@ Item {
                             KeyRow {
                                 visible: Object.keys(root.prop()).length > 0
                                 k: "Belongs to config"
-                                v: root.asText(root.prop()["config_hash"])
+                                v: root.hashText(root.prop()["config_hash"])
                             }
                             KeyRow {
                                 visible: Object.keys(root.prop()).length > 0
                                 k: "Proposal id"
-                                v: root.asText(root.prop()["proposal_id"])
+                                v: root.hashText(root.prop()["proposal_id"])
                             }
 
                             Text {
@@ -704,14 +744,14 @@ Item {
                                         Layout.alignment: Qt.AlignTop
                                     }
                                     Text {
-                                        text: modelData
+                                        text: root.hashText(modelData)
                                         color: root.colText
                                         font.pixelSize: 12
                                         font.family: root.mono
                                         wrapMode: Text.WrapAnywhere
                                         Layout.fillWidth: true
                                     }
-                                    CopyButton { value: modelData }
+                                    CopyButton { value: root.hashText(modelData) }
                                 }
                             }
                             Note {
@@ -733,7 +773,7 @@ Item {
                     ColumnLayout {
                         width: createMultisigPage.availableWidth
                         spacing: 16
-                        Item { Layout.preferredHeight: 10 }
+                        Item { Layout.preferredHeight: 18 }
 
                         PageHeader {
                             title: "Create Multisig"
@@ -813,7 +853,7 @@ Item {
                     ColumnLayout {
                         width: createProposalPage.availableWidth
                         spacing: 16
-                        Item { Layout.preferredHeight: 10 }
+                        Item { Layout.preferredHeight: 18 }
 
                         PageHeader {
                             title: "Create Proposal"
@@ -868,7 +908,7 @@ Item {
                     ColumnLayout {
                         width: approvePage.availableWidth
                         spacing: 16
-                        Item { Layout.preferredHeight: 10 }
+                        Item { Layout.preferredHeight: 18 }
 
                         PageHeader {
                             title: "Approve"
@@ -942,7 +982,7 @@ Item {
                     ColumnLayout {
                         width: executePage.availableWidth
                         spacing: 16
-                        Item { Layout.preferredHeight: 10 }
+                        Item { Layout.preferredHeight: 18 }
 
                         PageHeader {
                             title: "Execute"
@@ -980,7 +1020,7 @@ Item {
                     ColumnLayout {
                         width: accountsPage.availableWidth
                         spacing: 16
-                        Item { Layout.preferredHeight: 10 }
+                        Item { Layout.preferredHeight: 18 }
 
                         PageHeader {
                             title: "Accounts"
@@ -1142,7 +1182,7 @@ Item {
                     ColumnLayout {
                         width: settingsPage.availableWidth
                         spacing: 16
-                        Item { Layout.preferredHeight: 10 }
+                        Item { Layout.preferredHeight: 18 }
 
                         PageHeader {
                             title: "Settings"

@@ -32,6 +32,9 @@
 #include <QQmlComponent>
 #include <QQmlContext>
 #include <QQmlEngine>
+#include <QQuickView>
+#include <QQuickItem>
+#include <QImage>
 #include <QStringList>
 #include <QUrl>
 #include <QVariantMap>
@@ -195,6 +198,26 @@ int main(int argc, char** argv) {
               QStringLiteral("anything that is not a ProgramId is refused, not sent malformed"));
     }
 
+    // The decoder writes every 32-byte field as base58 with a `Public/` prefix, addresses and
+    // hashes alike. A config hash shown that way cannot be compared with the hex that was typed to
+    // fetch it. These two are the deployed config's own hash, in both spellings.
+    {
+        QVariant hex;
+        QMetaObject::invokeMethod(
+            rootObj, "base58ToHex", Q_RETURN_ARG(QVariant, hex),
+            Q_ARG(QVariant, QStringLiteral("Public/BMRJmNp8Z11QYLahuEHNiaSfbWjQ7QiuCZ6wFexRg2j5")));
+        check(hex.toString()
+                  == QStringLiteral(
+                      "99cff7fa1f0c4fa267f29d34baafd720906a0e4259e013bc2ca42ac53498fbe4"),
+              QStringLiteral("a hash is shown as the hex it was fetched by"));
+
+        QVariant untouched;
+        QMetaObject::invokeMethod(rootObj, "base58ToHex", Q_RETURN_ARG(QVariant, untouched),
+                                  Q_ARG(QVariant, QStringLiteral("not base58 at all")));
+        check(untouched.toString().isEmpty(),
+              QStringLiteral("anything that is not a 32-byte base58 value is left alone"));
+    }
+
     // ── 3. Optionally, the whole path a press of the fetch button takes ─────────────────────────
     if (qEnvironmentVariableIsSet("PMSIG_CONTRACT_LIVE")) {
         const QString hash = qEnvironmentVariable("PMSIG_CONFIG_HASH");
@@ -261,6 +284,42 @@ int main(int argc, char** argv) {
             qInfo().noquote() << "        lastError:" << plugin->property("lastError").toString();
         else
             qInfo().noquote() << "        accounts:" << accounts.size();
+    }
+
+    // ── 5. Optionally, a picture of every page ──────────────────────────────────────────────────
+    //
+    // PMSIG_SHOT=<prefix> renders each page to <prefix><n>.png under the offscreen platform. The
+    // layout is the one thing here no assertion can judge, and it is how this interface was
+    // reviewed: a panel that overlaps itself or runs off the pane is obvious in a picture and
+    // invisible in a log. With the live variables set, the pages are rendered holding real chain
+    // state rather than placeholders.
+    if (qEnvironmentVariableIsSet("PMSIG_SHOT")) {
+        if (qEnvironmentVariableIsSet("PMSIG_PROPOSAL_SEED")) {
+            QMetaObject::invokeMethod(plugin, "fetchConfig",
+                                      Q_ARG(QString, qEnvironmentVariable("PMSIG_CONFIG_HASH")));
+            QMetaObject::invokeMethod(plugin, "fetchProposal",
+                                      Q_ARG(QString, qEnvironmentVariable("PMSIG_PROPOSAL_SEED")));
+            QElapsedTimer w; w.start();
+            while (w.elapsed() < 90000) {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+                if (!plugin->property("proposal").toMap().isEmpty()
+                    && !plugin->property("config").toMap().isEmpty()) break;
+            }
+        }
+        QQuickView view;
+        view.engine()->rootContext()->setContextProperty("logos", &logos);
+        view.setResizeMode(QQuickView::SizeRootObjectToView);
+        view.setSource(QUrl::fromLocalFile(QString::fromLocal8Bit(argv[2])));
+        view.resize(1280, 860);
+        view.show();
+        for (int page = 0; page < 8; ++page) {
+            view.rootObject()->setProperty("currentPageIndex", page);
+            for (int i = 0; i < 40; ++i) QCoreApplication::processEvents(QEventLoop::AllEvents, 25);
+            const QImage shot = view.grabWindow();
+            const QString path = qEnvironmentVariable("PMSIG_SHOT") + QString::number(page) + ".png";
+            shot.save(path);
+            qInfo().noquote() << "shot:" << path;
+        }
     }
 
     // Tear the tree down while its context is still alive, so the run ends quietly.

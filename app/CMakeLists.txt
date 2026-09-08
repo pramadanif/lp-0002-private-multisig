@@ -72,5 +72,5 @@ set_target_properties(PrivateMultisigApp PROPERTIES
 # standalone app provides. Run by scripts/check-basecamp-contract.sh.
 add_executable(PrivateMultisigContractTest tests/module_contract_test.cpp)
 target_link_libraries(PrivateMultisigContractTest PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Qml
+    Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick
 )

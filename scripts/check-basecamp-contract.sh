@@ -11,6 +11,8 @@
 #
 #   PMSIG_CONTRACT_LIVE=1  also fetches a real account through the plugin's slots. Needs a reachable
 #                          sequencer and the deployment values (see docs/DEPLOYMENT.md).
+#   PMSIG_SHOT=<prefix>    renders every page to <prefix><n>.png. The layout is the one thing no
+#                          assertion here can judge; this is how the interface is reviewed.
 #
 # Missing tools fail this script (gate H2).
 
