@@ -284,5 +284,13 @@ refuses to echo a line containing one; and preflight **PF-16** fails the submiss
 file carries a witness. The existing logs on disk were redacted too. The check was mutation-tested
 by planting a real key in a tracked file and confirming it failed.
 
+**The rest of the sweep, so the scope is checked rather than assumed.** The CLI's `LocalState`
+persists `member_npks` — public keys — and never an `nsk`; the key is read per command from
+`--member-file` and stays in memory. Nothing in the SDK, the CLI or the store prints or writes a
+witness. The deliberate `witness` files the scripts pass with `--witness-file` live under `.e2e/`,
+which `.gitignore` covers, and none exists anywhere else in the tree. The committed artifact
+`artifacts/phase-E-ppe-approve-SUCCESS.txt` describes the witness's layout — "1312 byte Borsh —
+nsk, vpk, identifier, Merkle path" — without containing it.
+
 **What it cost to find:** nothing but reading a file before publishing it. **What it would have cost
 not to:** the one secret this entire prize is about, in public, in the repository submitted to win it.
