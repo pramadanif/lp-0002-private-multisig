@@ -83,8 +83,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         account_id: AccountId,
         npk: Digest32,
     }
+    // Which two shielded accounts are the members. The default — the first two the wallet lists —
+    // is what every run has used, and it is fine while a wallet holds exactly two. It stops being
+    // fine when a member's account has to be chosen rather than inherited: a wallet accumulates
+    // accounts, and the first two are then whichever ones happen to sort first.
+    //
+    // PMSIG_MEMBER_IDS takes two comma-separated account ids and uses those instead. The member
+    // root, and therefore config_hash and every address, depends on this choice, so it is recorded
+    // by printing the ids below rather than left implicit.
+    let chosen: Vec<&serde_json::Value> = match std::env::var("PMSIG_MEMBER_IDS") {
+        Err(_) => privates.iter().take(2).copied().collect(),
+        Ok(list) => {
+            let wanted: Vec<&str> = list
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .collect();
+            if wanted.len() != 2 {
+                return Err(format!(
+                    "PMSIG_MEMBER_IDS needs exactly two comma-separated account ids, got {}",
+                    wanted.len()
+                )
+                .into());
+            }
+            let mut picked = Vec::new();
+            for want in &wanted {
+                let found = privates.iter().find(|a| {
+                    a.get("account_id").and_then(serde_json::Value::as_str) == Some(*want)
+                });
+                match found {
+                    Some(a) => picked.push(*a),
+                    None => {
+                        return Err(format!(
+                            "PMSIG_MEMBER_IDS names {want}, which is not a shielded account in this wallet"
+                        )
+                        .into())
+                    }
+                }
+            }
+            picked
+        }
+    };
+
     let mut members = Vec::new();
-    for account in privates.iter().take(2) {
+    for account in chosen {
         let account_id: AccountId = dig(account, &["account_id"])?
             .as_str()
             .ok_or("account_id is not a string")?
