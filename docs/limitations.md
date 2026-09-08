@@ -184,17 +184,30 @@ keeps their own authentication path. The on-chain state has no member list at al
 ## 13. What is not yet demonstrated
 
 Stated plainly, because the difference between "designed" and "demonstrated" is the whole point of
-this prize's evidence gates:
+this prize's evidence gates. Everything struck through here was undemonstrated when it was written
+and is not any more; the entries are kept rather than deleted so the record shows what changed.
 
-- ~~A completed privacy-preserving approval.~~ **Now demonstrated.** A real anonymous approval was
-  proved with `RISC0_DEV_MODE=0` and confirmed on chain (tx `f2458791…198fbcb5`); the proposal
-  account holds one approval and one nullifier matching the client's computation, with no member
-  identity. What remains undemonstrated is `execute` at full M, which needs a second approval from a
-  second shielded account.
-- **The multisig on the public testnet.** The wallet is funded: balance **450** on
-  `https://testnet.lez.logos.co`, topped up from 300 by `./scripts/fund-testnet.sh` (Piñata
-  proof-of-work faucet, no human gate). Wallet home is `.e2e/wallet-testnet`.
-  **The programs are
-  not deployed there yet** and no multisig exists on it. Everything demonstrated so far is on a local
-  standalone sequencer. `docs/DEPLOYMENT.md` and the on-chain CU figures in
-  [cu-costs.md](cu-costs.md) do not exist yet.
+- ~~A completed privacy-preserving approval.~~ **Demonstrated.** Real anonymous approvals proved
+  with `RISC0_DEV_MODE=0`, with no member identity on chain — only a count and nullifiers.
+- ~~`execute` at full M.~~ **Demonstrated at the full 2-of-3**, not a lowered threshold:
+  `verify-onchain.sh` checks that specifically (H13/W15) and re-read it from public data on
+  2026-09-09.
+- ~~The multisig on the public testnet.~~ **Deployed and live.** Both programs, a 2-of-3 config, a
+  proposal, two anonymous approvals and an executed transfer — treasury 100 → 40, payee 0 → 60.
+  Every transaction is linked in [DEPLOYMENT.md](DEPLOYMENT.md).
+- ~~The Basecamp module doing anything.~~ **It reads the chain**, through the same plugin slots the
+  UI calls — see [basecamp-load.md](basecamp-load.md).
+
+What is genuinely still open:
+
+- **The narrated video.** Not recorded. It needs a human voice — an AI narration is one of the
+  stated reasons the previous submission for this prize was rejected.
+- **The public explorer's index.** All eleven evidence URLs answer over JSON-RPC, and the explorer
+  renders six of them; the five lifecycle transactions are on chain but not yet indexed.
+  `./scripts/check-explorer-links.sh` reports which, and exits 75 rather than passing quietly.
+- **One platform variant.** The Basecamp package carries `darwin-arm64` only — the machine it was
+  built on. Nothing in the module is macOS-specific; no second machine was available to build and
+  test the others, and shipping an untested variant is worse than shipping none.
+- **Writes from the Basecamp UI against a public chain.** The module's instruction panels are wired
+  and report failure rather than doing nothing silently, but the lifecycle evidence was produced by
+  the CLI; the UI has been shown reading that state, not creating it.
