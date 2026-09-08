@@ -106,8 +106,8 @@ as evidence anywhere.
 | | |
 |-|-|
 | Basecamp module | [`app/private_multisig.lgx`](../app/private_multisig.lgx) |
-| Size | 2,637,016 bytes |
-| sha256 | `c5cb15eb38190bcedfe657b3b6bc6dd339adce2dc44e7afa9bc0d58c8c06c217` |
+| Size | 2,620,437 bytes |
+| sha256 | `a5273e76ad1a00c5e5a0554eaedf76cd23b7f57f50f07036b75db9feb0539d3e` |
 | Variant | `darwin-arm64` (built on the machine that produced it — [limitations](limitations.md)) |
 | Install steps | [basecamp-load.md](basecamp-load.md) |
 
@@ -143,8 +143,18 @@ was approved (INV-7), that the treasury holds exactly the remainder, and that th
 Listed first-class, because the difference between built and demonstrated is what this prize's gates
 test:
 
-- **The Basecamp module has not been shown loading in Basecamp.** `app/private_multisig.lgx` is
-  built and committed — 2,637,016 bytes, sha256 `1ad70183…b4b943e`, `lgx verify` reports the
+- **The Basecamp module installs, and its UI has not been driven on camera.** The package installs
+  through Basecamp's own "Install Local Package" and is listed as `ui_qml`, and the plugin loads
+  under Basecamp's Qt — verified by `dlopen` against the application's own frameworks. What is not
+  yet shown is the window open and doing something. It also carries only the `darwin-arm64` variant.
+
+  Getting there took three fixes worth stating, because each fails silently and none is documented:
+  `lgx` 0.1.0 writes a package format Basecamp 0.2.3 cannot read; the plugin must be built against
+  the Qt the host ships (6.9.2, not the newest installed); and the linker's absolute paths to the
+  build machine have to be rewritten. See [basecamp-load.md](basecamp-load.md).
+
+- ~~**The Basecamp module has not been shown loading in Basecamp.**~~ `app/private_multisig.lgx` is
+  built and committed — 2,620,437 bytes, sha256 `1ad70183…b4b943e`, `lgx verify` reports the
   structure valid, and it contains the C ABI library the UI's thirteen `extern "C"` functions call,
   with every symbol checked before packaging. But `lgx verify` tests structure, not loading, and the
   criterion asks for a module that loads. The package also carries only the `darwin-arm64` variant,

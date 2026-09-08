@@ -5,7 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickWidgets Concurrent)
+# Concurrent is deliberately absent: Basecamp does not ship QtConcurrent, and a plugin linking a
+# framework the host lacks cannot be loaded — the module installs and never appears.
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickWidgets)
 
 # ── FFI shared library (built by `make ffi`) ──────────────────────────────────
 add_library(private_multisig_ffi SHARED IMPORTED)
@@ -26,7 +28,7 @@ qt_add_resources(PrivateMultisigPlugin "private_multisig_qml"
 )
 
 target_link_libraries(PrivateMultisigPlugin PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickWidgets Qt6::Concurrent
+    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickWidgets
     private_multisig_ffi
 )
 
@@ -47,7 +49,7 @@ qt_add_resources(PrivateMultisigApp "private_multisig_qml"
 )
 
 target_link_libraries(PrivateMultisigApp PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickWidgets Qt6::Concurrent
+    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickWidgets
     private_multisig_ffi
 )
 

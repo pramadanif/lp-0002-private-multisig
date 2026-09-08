@@ -41,6 +41,9 @@ def main() -> int:
     # them here does not step on lgx's ownership of `main`, the variants or the hashes.
     DESCRIPTIVE = (
         "author", "category", "description", "homepage", "license", "version", "type", "icon",
+        # Basecamp's own ui_qml modules carry display_name and the library reads it; lgx does not
+        # write one, so without this the row has no readable name.
+        "display_name",
     )
 
     with gzip.open(lgx_path, "rb") as gz:

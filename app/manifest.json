@@ -1,16 +1,17 @@
 {
   "author": "pramadanif",
-  "category": "Blockchain",
+  "category": "blockchain",
   "dependencies": [],
   "description": "Private M-of-N multisig for LEZ: shielded members approve without revealing which member approved. Threshold-only on-chain state.",
   "homepage": "https://github.com/pramadanif/lp0002",
-  "icon": "assets/icon.png",
+  "icon": "icon.png",
   "license": "MIT OR Apache-2.0",
   "main": {
-    "darwin-arm64": "libprivate_multisig_plugin.dylib"
+    "darwin-arm64": "private_multisig_plugin.dylib"
   },
   "manifestVersion": "0.2.0",
   "name": "private_multisig",
   "type": "ui_qml",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "view": "qml/Main.qml"
 }

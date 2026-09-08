@@ -8,7 +8,7 @@
 #include <QSettings>
 #include <QThreadPool>
 #include <QTimer>
-#include <QtConcurrent/QtConcurrent>
+#include <QThreadPool>
 
 extern "C" {
     char* private_multisig_create_multisig(const char* args_json);
@@ -98,14 +98,24 @@ void PrivateMultisigBackend::dispatchFfi(const QString& operation, std::function
     m_busy = true;
     emit busyChanged();
 
-    auto* watcher = new QFutureWatcher<QString>(this);
-    connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, operation]() {
-        handleFfiResult(operation, watcher->result());
-        watcher->deleteLater();
-        m_busy = false;
-        emit busyChanged();
+    // Deliberately not QtConcurrent. Basecamp ships QtCore, QtGui, QtQml, QtQuick, QtWidgets and
+    // dozens more in its own Frameworks directory — but not QtConcurrent, and a plugin that links a
+    // framework the host does not have cannot be loaded at all. That is why the module installed
+    // and then never appeared: the ui_qml path loads the plugin, and loading failed.
+    //
+    // QThreadPool is in QtCore and does the same job here: run the call off the UI thread, deliver
+    // the result back on it.
+    QThreadPool::globalInstance()->start([this, operation, fn]() {
+        const QString result = fn();
+        QMetaObject::invokeMethod(
+            this,
+            [this, operation, result]() {
+                handleFfiResult(operation, result);
+                m_busy = false;
+                emit busyChanged();
+            },
+            Qt::QueuedConnection);
     });
-    watcher->setFuture(QtConcurrent::run(fn));
 }
 
 void PrivateMultisigBackend::handleFfiResult(const QString& operation, const QString& result) {

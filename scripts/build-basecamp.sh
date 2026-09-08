@@ -127,72 +127,131 @@ EOF
   exit 1
 fi
 
-cmake -S app -B app/build -DCMAKE_BUILD_TYPE=Release || die "cmake configure failed"
+# Build against the Qt the *host* ships, not the newest one installed here. Qt embeds a version tag
+# symbol, so a plugin built against 6.11 cannot be loaded by an application carrying 6.9: dlopen
+# fails with "Symbol not found: _qt_version_tag_6_11" and Basecamp logs nothing at all — the module
+# installs and never appears. Basecamp 0.2.3 carries Qt 6.9.2.
+#
+#   python3 -m aqt install-qt mac desktop 6.9.2 clang_64 -O ~/qt-basecamp
+QT_FOR_BASECAMP="${PMSIG_QT_DIR:-$HOME/qt-basecamp/6.9.2/macos}"
+if [[ -d "$QT_FOR_BASECAMP" ]]; then
+  info "building against Qt at $QT_FOR_BASECAMP"
+  CMAKE_QT_ARG=(-DCMAKE_PREFIX_PATH="$QT_FOR_BASECAMP")
+else
+  echo "WARNING: $QT_FOR_BASECAMP not found — building against whatever Qt cmake finds." >&2
+  echo "         If that is newer than the host's Qt, the module will install and never load." >&2
+  CMAKE_QT_ARG=()
+fi
+cmake -S app -B app/build -DCMAKE_BUILD_TYPE=Release "${CMAKE_QT_ARG[@]}" || die "cmake configure failed"
 cmake --build app/build --parallel || die "plugin build failed"
 info "plugin built"
 
+# ─── 3b. Point the plugin at libraries that will exist where it runs ─────────────────────────────
+#
+# As linked, the plugin names absolute paths on the machine that built it: Qt under
+# /opt/homebrew/..., and libpmsig_ffi.dylib under this checkout's target/ directory. Neither exists
+# inside Basecamp, so the module installed and then never appeared — the ui_qml path loads the
+# plugin, and loading failed with nothing written to the log.
+#
+# Basecamp ships QtCore, QtGui, QtQml, QtQuick, QtQuickWidgets, QtWidgets and the rest in its own
+# Frameworks directory, so @rpath resolves them there. The FFI library travels inside the package
+# next to the plugin, so @loader_path finds it.
+log "rewriting the plugin's library paths for the host that will load it"
+PLUGIN_BUILT="app/build/libprivate_multisig_plugin.dylib"
+[[ -f "$PLUGIN_BUILT" ]] || die "$PLUGIN_BUILT not found after the build"
+
+install_name_tool -id "@loader_path/libpmsig_ffi.$LIBEXT" "app/lib/libpmsig_ffi.$LIBEXT" 2>/dev/null \
+  || die "could not set the FFI library's install name"
+
+while read -r dep; do
+  case "$dep" in
+    /opt/homebrew/*Qt*.framework/*)
+      fw=${dep##*/}
+      install_name_tool -change "$dep" "@rpath/$fw.framework/Versions/A/$fw" "$PLUGIN_BUILT" \
+        || die "could not repoint $fw"
+      ;;
+    */libpmsig_ffi.$LIBEXT)
+      install_name_tool -change "$dep" "@loader_path/libpmsig_ffi.$LIBEXT" "$PLUGIN_BUILT" \
+        || die "could not repoint the FFI library"
+      ;;
+  esac
+done < <(otool -L "$PLUGIN_BUILT" | tail -n +2 | awk '{print $1}')
+
+# An absolute path left behind is a plugin that cannot load on any machine but this one.
+leftover=$(otool -L "$PLUGIN_BUILT" | tail -n +2 | awk '{print $1}' \
+  | grep -E '^/opt/homebrew|^'"$PWD" || true)
+if [[ -n "$leftover" ]]; then
+  die "the plugin still names build-machine paths, so it will not load elsewhere:
+$(printf '       %s\n' $leftover)"
+fi
+info "library paths rewritten; no build-machine paths remain"
+
 # ─── 4. Package the .lgx ────────────────────────────────────────────────────────────────────────
 log "packaging the .lgx"
-command -v lgx >/dev/null 2>&1 || die "the 'lgx' tool is not installed.
-       Get it from https://github.com/logos-co/logos-package
-       Criterion P-U2 requires a downloadable, loadable package."
 
-# `lgx add` packages one *variant* — a platform's build — and needs to be told which, plus the QML
-# entry point. A package is per-platform: this builds the variant for the machine it runs on, and
-# the other variants come from running it on that platform.
+# Not `lgx`. Version 0.1.0 of that tool writes manifestVersion 0.5.0 packages with the icon in a
+# top-level assets/ directory; Logos Basecamp 0.2.3 reads the 0.3.0 layout, where the icon and
+# metadata.json live inside the variant. A 0.5.0 package installs with no error and no effect —
+# Basecamp logs `installPlugin` and then nothing at all, and the module never appears. See
+# docs/basecamp-load.md. scripts/pack_lgx.py writes the layout the host actually reads.
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64)  VARIANT=darwin-arm64 ;;
   Darwin-x86_64) VARIANT=darwin-amd64 ;;
   Linux-x86_64)  VARIANT=linux-amd64 ;;
   Linux-aarch64) VARIANT=linux-arm64 ;;
-  *) die "unsupported platform $(uname -s)-$(uname -m) — no lgx variant name for it" ;;
+  *) die "unsupported platform $(uname -s)-$(uname -m) — no variant name for it" ;;
 esac
-# The manifest already names the plugin per variant; keep the package agreeing with it rather than
-# guessing a second time.
+
 PLUGIN_NAME=$(python3 -c "
 import json
 print(json.load(open('app/manifest.json'))['main']['$VARIANT'])" 2>/dev/null) \
   || die "app/manifest.json does not name a plugin for variant $VARIANT"
 
 rm -rf app/.lgx-staging && mkdir -p app/.lgx-staging/qml
-cp app/build/lib*_plugin.* app/.lgx-staging/ 2>/dev/null || die "no built plugin to package"
+# Basecamp's own modules ship the plugin without a `lib` prefix, and name it that way in `main`.
+cp "app/build/libprivate_multisig_plugin.$LIBEXT" "app/.lgx-staging/$PLUGIN_NAME" \
+  || die "no built plugin to package"
 cp app/qml/Main.qml app/.lgx-staging/qml/
+# Qt cannot register a QML module without a qmldir; every ui_qml module Basecamp ships has one.
+[[ -s app/qml/qmldir ]] || die "app/qml/qmldir is missing — a ui_qml module needs one"
+cp app/qml/qmldir app/.lgx-staging/qml/
 # Without this the package loads and then fails on the first call into the program.
 cp "app/lib/libpmsig_ffi.$LIBEXT" app/.lgx-staging/ \
-  || die "the FFI library is not in app/lib — stage 2b did not run"
-[[ -f "app/.lgx-staging/$PLUGIN_NAME" ]] \
-  || die "the manifest names $PLUGIN_NAME for $VARIANT but the build produced $(cd app/.lgx-staging && ls lib*_plugin.* 2>/dev/null | tr '\n' ' ')"
+  || die "the FFI library is not in app/lib — the earlier stage did not run"
+[[ -s app/assets/icon.png ]] || die "app/assets/icon.png is missing"
+cp app/assets/icon.png app/.lgx-staging/icon.png
+[[ -s app/metadata.json ]] || die "app/metadata.json is missing"
 
-# `lgx create` refuses to overwrite, so a second run would fail on the package the first one left.
 rm -f app/private_multisig.lgx
-( cd app && lgx create private_multisig ) || die "lgx create failed"
-
-# The metadata has to go in *before* `lgx add`, not after. `lgx create` writes a skeleton with no
-# hashes; `lgx add` computes them over whatever the manifest then says. Editing the manifest
-# afterwards leaves `hashes.root` describing a file that no longer exists, and Basecamp rejects the
-# package on the ui_qml install path — silently: it logs `installPlugin` and then nothing at all.
-# The previous package escaped that only because its `type` was empty, so Basecamp never took the
-# UI path; it installed, showed Type "-", and never reached Applications.
-python3 scripts/patch_lgx_manifest.py app/private_multisig.lgx app/manifest.json \
-  || die "merging the manifest metadata failed"
-# --icon is required for a ui_qml package and is what fills the icon Basecamp shows; without it the
-# installed manifest carried an empty icon, and the manifest pointed at an icon.svg that was never
-# in the package.
-[[ -s app/assets/icon.png ]] || die "app/assets/icon.png is missing — a ui_qml package needs a 256x256 PNG icon"
-python3 -c "
-from struct import unpack
-import sys
-d = open('app/assets/icon.png','rb').read()
-if d[:8] != b'\x89PNG\r\n\x1a\n': sys.exit('not a PNG')
-w, h = unpack('>II', d[16:24])
-if (w, h) != (256, 256): sys.exit(f'icon must be exactly 256x256, is {w}x{h}')
-" || die "app/assets/icon.png is not a 256x256 PNG"
-
-lgx add app/private_multisig.lgx --variant "$VARIANT" --files app/.lgx-staging \
-  --main "$PLUGIN_NAME" --view qml/Main.qml --icon app/assets/icon.png -y || die "lgx add failed"
-info "variant $VARIANT packaged"
-lgx verify app/private_multisig.lgx || die "lgx verify failed"
+python3 scripts/pack_lgx.py app/private_multisig.lgx "$VARIANT" app/.lgx-staging \
+  app/manifest.json --metadata app/metadata.json || die "packaging failed"
 rm -rf app/.lgx-staging
+
+# The package must carry the hashes it claims. pack_lgx.py computes them; this reads them back out
+# of the finished archive, so a packaging bug cannot ship a package that only says it is consistent.
+python3 - <<'PYCHECK' || die "the packaged hashes do not match its contents"
+import gzip, hashlib, io, json, tarfile, sys
+def sha(b): return hashlib.sha256(b).hexdigest()
+raw = gzip.open("app/private_multisig.lgx", "rb").read()
+t = tarfile.open(fileobj=io.BytesIO(raw))
+files = {m.name.lstrip("./"): m for m in t.getmembers() if m.isfile()}
+mf = json.loads(t.extractfile(files["manifest.json"]).read())
+v = next(k.split("/", 1)[1] for k in mf["hashes"] if k.startswith("variants/"))
+pre = f"variants/{v}/"
+vf = {n[len(pre):]: t.extractfile(m).read() for n, m in files.items() if n.startswith(pre)}
+vh = sha("".join(f"{p}\0{sha(d)}\n" for p, d in sorted(vf.items())).encode())
+vsh = sha(f"{v}\0{vh}\n".encode())
+rh = sha(f"variants\0{vsh}\n".encode())
+bad = [n for n, (a, b) in {
+    f"variants/{v}": (vh, mf["hashes"][f"variants/{v}"]),
+    "variants": (vsh, mf["hashes"]["variants"]),
+    "root": (rh, mf["hashes"]["root"]),
+}.items() if a != b]
+if bad:
+    print("FAILED: hashes disagree with contents:", ", ".join(bad), file=sys.stderr)
+    sys.exit(1)
+print("  hashes match the packaged contents")
+PYCHECK
 
 SHA=$(shasum -a 256 app/private_multisig.lgx | awk '{print $1}')
 SIZE=$(wc -c < app/private_multisig.lgx | tr -d ' ')
