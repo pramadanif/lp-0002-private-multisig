@@ -89,6 +89,25 @@ That is **≈22× the standalone proof**, which is the price of recursion over t
 at all, because ~9 GB of the machine's 16 GB was already held by a browser and two editors. It was
 contention, not capacity. See `docs/limitations.md` §10a.
 
+#### Repeated on another day
+
+A single measurement of a twenty-minute proof is a weak claim, so here is the same thing again. The
+full e2e run of 2026-09-09 ([evidence](../evidence/e2e-local-2026-09-09.md)) proved **two** composed
+approvals back to back on the same laptop:
+
+| | Approval 1 | Approval 2 |
+|-|-----------|-----------|
+| Proving time | ~20 min | **21 min** |
+| Peak r0vm RSS observed | 8.1 GB | **9.2 GB** |
+
+So the figure above holds: about twenty minutes and roughly nine gigabytes, twice more, on a
+different day, from the committed reproducible guests.
+
+Both numbers here are **sampled**, not maxima. The run's heartbeat reads r0vm's resident set once a
+minute, so a spike between samples is invisible to it; 8.74 GB in the table above came from a
+finer-grained measurement and is the figure to quote. The sampled 9.2 GB is consistent with it, not
+a correction to it — and it is why `limitations.md` asks for ~9 GB free rather than 8.74.
+
 ### Known measurement anomaly
 
 A *second* standalone proof in the same process did not complete within 25 minutes on two occasions,
