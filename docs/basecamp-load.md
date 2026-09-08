@@ -51,6 +51,21 @@ empty.
 
 Then, on **Config**, paste the `config_hash` and press ↻; on **Proposal**, the `proposal_seed`.
 
+## What each panel does, and how that was checked
+
+Against the deployment in [DEPLOYMENT.md](DEPLOYMENT.md), through the plugin's own slots — the same
+path the buttons take.
+
+| Panel | State | How |
+|-------|-------|-----|
+| Config | reads the chain | `fetchConfig` returns the deployed 2-of-3: `m 2`, `n 3`, member root, membership program id. Asserted by `check-basecamp-contract.sh` with `PMSIG_CONTRACT_LIVE=1` |
+| Proposal | reads the chain | `fetchProposal` returns `executed true`, two distinct nullifiers, and the `TreasuryTransfer` of 60 to the payee `verify-onchain.sh` checks |
+| Wallet → connection | works | `checkConnection` → `{"status":"ok","sequencer_url":"https://testnet.lez.logos.co"}` |
+| Wallet → accounts | works | `listAccounts` reads 5 accounts from the same wallet the CLI uses, once **Wallet CLI directory** is set |
+| Wallet → inspect | works | `inspectAccount` on the payee returns its owner program and status |
+| Wallet → decode | works | `decodeAccount` on the config PDA returns `type: MultisigConfig` with the fields above — this is what the IDL's account layouts bought |
+| Create Multisig · Create Proposal · Approve · Execute | wired | These submit transactions, so they are not fired at the public chain by a check. What is asserted is that the slot reaches the FFI and reports: `execute` with a seed that cannot be hex returns an error rather than doing nothing. The lifecycle evidence comes from the CLI |
+
 ## Why the panels rendered and did nothing
 
 The module shipped for a day looking complete and doing nothing: every panel drew, and no button
