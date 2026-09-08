@@ -106,8 +106,8 @@ as evidence anywhere.
 | | |
 |-|-|
 | Basecamp module | [`app/private_multisig.lgx`](../app/private_multisig.lgx) |
-| Size | 2,632,797 bytes |
-| sha256 | `3fbb94698be9257760e0549444f365fd54625f8db1ae16679d585532fcac5dd5` |
+| Size | 2,632,590 bytes |
+| sha256 | `c8056283a7f9c7b5ccca32841ec195bd011e54c54cea217f217b80e7f436fd06` |
 | Variant | `darwin-arm64` (built on the machine that produced it — [limitations](limitations.md)) |
 | Install steps | [basecamp-load.md](basecamp-load.md) |
 
@@ -144,7 +144,7 @@ Listed first-class, because the difference between built and demonstrated is wha
 test:
 
 - **The Basecamp module loads, and its panels read the chain — but no UI has been driven on
-  camera yet.** `app/private_multisig.lgx` — 2,632,797 bytes, sha256 `3fbb9469…fcac5dd5` — installs
+  camera yet.** `app/private_multisig.lgx` — 2,632,590 bytes, sha256 `c8056283…f436fd06` — installs
   through Basecamp's own "Install Local Package", is listed as `ui_qml`, and opens from
   Applications → Blockchain.
 

@@ -958,16 +958,6 @@ Item {
                                 text: "Once it lands, the Proposal page reads the result back: the approval count "
                                       + "and its nullifiers, and no member identity."
                             }
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Item { Layout.fillWidth: true }
-                                // Routed through the backend so the refusal has one wording, and so a caller
-                                // reaching the slot directly gets the same answer this page gives.
-                                GhostButton {
-                                    text: "Explain in a message"
-                                    onClicked: backend.approve("", "", "", "", [])
-                                }
-                            }
                         }
 
                         Item { Layout.preferredHeight: 40 }
