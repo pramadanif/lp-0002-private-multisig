@@ -101,6 +101,34 @@ Full reasoning: [ADR-001](adr/ADR-001-architecture.md) and
 `RISC0_DEV_MODE=0`. `demo-fast.sh` is a development tour, generates no proof, and is **not** cited
 as evidence anywhere.
 
+## Downloads, and how to check them yourself
+
+| | |
+|-|-|
+| Basecamp module | [`app/private_multisig.lgx`](../app/private_multisig.lgx) |
+| Size | 2,622,557 bytes |
+| sha256 | `1ad7018313cc7702d197c074276cfba2d78c1c5a5741c87a850e6dec2b4b943e` |
+| Variant | `darwin-arm64` (built on the machine that produced it — [limitations](limitations.md)) |
+| Install steps | [basecamp-load.md](basecamp-load.md) |
+
+```bash
+shasum -a 256 app/private_multisig.lgx     # must match the hash above
+lgx verify app/private_multisig.lgx        # "Package structure is valid"
+```
+
+Verify the deployment from public data, needing no secrets and no local state:
+
+```bash
+./scripts/verify-onchain.sh                # reads docs/DEPLOYMENT.md
+./scripts/check-explorer-links.sh          # every evidence URL must resolve
+```
+
+`verify-onchain.sh` checks the config account is owned by the program and rehashes to its own
+address, that it names the deployed verifier, that the threshold was met at **full M** with distinct
+nullifiers, that the proposal executed, that the payee named *by the proposal* holds the amount that
+was approved (INV-7), that the treasury holds exactly the remainder, and that the approvals were
+`PrivacyPreserving` transactions rather than public ones.
+
 ## Measurements
 
 | | |
@@ -116,7 +144,7 @@ Listed first-class, because the difference between built and demonstrated is wha
 test:
 
 - **The Basecamp module has not been shown loading in Basecamp.** `app/private_multisig.lgx` is
-  built and committed — 2,605,557 bytes, sha256 `785eb121…40746ad`, `lgx verify` reports the
+  built and committed — 2,622,557 bytes, sha256 `1ad70183…b4b943e`, `lgx verify` reports the
   structure valid, and it contains the C ABI library the UI's thirteen `extern "C"` functions call,
   with every symbol checked before packaging. But `lgx verify` tests structure, not loading, and the
   criterion asks for a module that loads. The package also carries only the `darwin-arm64` variant,

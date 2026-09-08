@@ -213,6 +213,17 @@ jobs:
           fi
           exit "$status"
 
+  criteria-summary:
+    name: the criteria checklist agrees with itself
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The summary once claimed 10 criteria met while its own rows showed 19. A submission's
+      # account of what it has done is the first thing a reviewer reads, and one that contradicts
+      # the evidence beneath it reads as carelessness at best.
+      - name: check-criteria-summary.py
+        run: python3 scripts/check-criteria-summary.py
+
   basecamp-privacy:
     name: Basecamp UI must not leak member secrets
     runs-on: ubuntu-latest

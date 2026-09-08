@@ -8,7 +8,8 @@ Built for [λPrize LP-0002](docs/plan/LP-0002.md). Licensed **MIT OR Apache-2.0*
 
 Repository: <https://github.com/pramadanif/lp0002>
 
-> **Status: the full lifecycle runs on the LEZ public testnet.** A 2-of-3 multisig was created,
+> **Status: the full lifecycle runs on the LEZ public testnet.** (Redeployed 2026-09-08 after the
+> testnet was reset — a reset wipes every deployment, so this is re-run close to submission.) A 2-of-3 multisig was created,
 > funded, proposed against, approved twice by shielded members anonymously with `RISC0_DEV_MODE=0`,
 > and executed — moving the treasury 100 → 40 and the payee 0 → 60, with both sides of the move
 > visible in accounts owned by two different programs. `./scripts/verify-onchain.sh` re-checks all of
@@ -18,12 +19,12 @@ Repository: <https://github.com/pramadanif/lp0002>
 > | | |
 > |-|-|
 > | Network | LEZ public testnet, `https://testnet.lez.logos.co` |
-> | `membership` | ImageID `960db4f2…07eade`, deployed block 38661 |
-> | `multisig` | ImageID `79cf1dba…4a60468`, deployed block 40565 |
-> | Multisig (config PDA) | `n3HuidKXZA76ZpsrDr3NLitRFqQDndr6BHxzaeq7aRH` |
-> | Proposal PDA | `DgPGeMewSSoSJ5jkPMYfZaQTDNuDdiKPB6Q4V6go6j4y` |
-> | Payee | `AwB9sZARmYaW6znJMcsCwSoJjnRcvuwE1cKKf8z8Swos` |
-> | Lifecycle | create 43002 · propose 43004 · approve 43040 · approve 43061 · execute 43065 |
+> | `membership` | ImageID `960db4f2…07eade`, deployed block 62 |
+> | `multisig` | ImageID `79cf1dba…4a60468`, deployed block 63 |
+> | Multisig (config PDA) | `4ZKN1S7R8F9V2fJEzDz65ogabhDi8sDS82W5i4mADZxt` |
+> | Proposal PDA | `32Te128ntLW4wSbT6xDb7SYha7q2g8EjFDYTUoDKHEDF` |
+> | Payee | `9NJmD3awoi9FT1yxZFMCvPxuHDcedZbK6LoZ9ZyhAC1J` |
+> | Lifecycle | create_multisig `007d9ff2…` · propose `aa14aa28…` · approve `a3eaeb3a…` · approve `2a283d3c…` · execute `d1a47fdd…` |
 >
 > Every transaction is listed with its explorer link in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 > CI runs the same lifecycle against a standalone sequencer on every push

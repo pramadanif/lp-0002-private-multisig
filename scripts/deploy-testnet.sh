@@ -529,7 +529,12 @@ log "verifying from public chain data"
   "$((TREASURY_AMOUNT - TRANSFER_AMOUNT))" || die "on-chain verification failed"
 # 75 means the chain has every transaction but the explorer has not caught up. That is expected
 # minutes after writing them and is not a reason to fail a deployment that otherwise succeeded.
-./scripts/check-explorer-links.sh; link_status=$?
+# `cmd; status=$?` does not capture anything under `set -e`: the non-zero exit kills the script on
+# the first line, before the assignment runs. That is what happened on the run that deployed
+# successfully, verified successfully, wrote DEPLOYMENT.md — and then died without printing DONE,
+# because the links were merely not indexed yet. `|| status=$?` keeps the shell alive.
+link_status=0
+./scripts/check-explorer-links.sh || link_status=$?
 case "$link_status" in
   0)  ;;
   75) info "explorer links are pending indexing — re-run ./scripts/check-explorer-links.sh before opening the PR" ;;

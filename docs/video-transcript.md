@@ -4,7 +4,19 @@
 reading and running rather than improvising. The transcript proper replaces the "say" lines once the
 video exists.
 
-The prize is explicit that **a silent screencast is not sufficient** — the builder must narrate what
+**Three things closed a rival submission for this exact prize on 2026-09-07, in the reviewer's own
+words. They are requirements, not preferences:**
+
+1. *"demo video doesn't cover Basecamp app but only CLI"* — the Basecamp module must appear on
+   camera, doing something.
+2. *"demo video is narrated using AI which is not fair comparing to other submitters"* — **narrate
+   it yourself.** No text-to-speech, no synthetic voice, no cloned voice. This one is
+   disqualifying and cannot be fixed in the edit.
+3. *"main point of submission is the solution file … transaction hashes are trimmed and do not have
+   links, video link is missing"* — the video URL goes in `solutions/LP-0002.md`, not only in the
+   PR description.
+
+The prize is also explicit that **a silent screencast is not sufficient** — the builder must narrate what
 they built and why, walk through the architecture, and demonstrate M-of-N approval and execution
 using shielded accounts. It also requires terminal output showing proof generation, confirming
 `RISC0_DEV_MODE=0`.
@@ -19,6 +31,11 @@ using shielded accounts. It also requires terminal output showing proof generati
 3. **Close Chrome and one editor.** The composed proof needs ~9 GB free; on a loaded machine it
    swaps and appears to hang. This is the single most likely way for a recording to go wrong.
 4. Terminal at a legible font size. A reviewer has to read `RISC0_DEV_MODE=0`.
+5. **Install the current `.lgx` first** and confirm Type reads `ui_qml`, not "-" — see
+   [basecamp-load.md](basecamp-load.md). Recording a package that Basecamp does not recognise is
+   worse than not showing it.
+6. The pin commit on screen must be the commit the submission names. Film after the pin is settled,
+   not before.
 
 ## Shot list
 
@@ -118,6 +135,27 @@ Show `tried-failed.md`.
 looking for what does not.
 
 ---
+
+### 7. The Basecamp module (~90 s) — REQUIRED
+
+A CLI-only video was rejected for this prize. This section is not optional.
+
+**Show, in this order:**
+
+1. **Package Manager → local.** The row for `private_multisig`: **Type `ui_qml`**, with a size and a
+   date. Say the number out loud — "two point six megabytes" — and note the sha256 is published in
+   `docs/basecamp-load.md` so anyone can check what they downloaded.
+2. **Applications → Blockchain.** The module appears there with its icon, the same way a catalog app
+   does. Open it.
+3. **Do something in the UI on camera.** Even reading a config or a proposal back from the chain is
+   enough — what the reviewer needs to see is the module working, not a screenshot of it installed.
+
+**Say:** "The module is generated from the same IDL the CLI uses, and the C ABI behind it is
+generated too — thirteen functions, and the build refuses to package unless every one of them is
+actually exported. Nothing here is a mock."
+
+**Honesty on camera:** say plainly that the package carries the `darwin-arm64` variant only, built
+on this machine. That is in `limitations.md` and saying it costs nothing.
 
 ## Checklist before publishing
 

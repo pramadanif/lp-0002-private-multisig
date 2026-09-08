@@ -6,7 +6,12 @@
 - Solution repo absolute path: /Users/muhammadbaguspramadani/Documents/myproject/lp-0002-private-multisig
 - Current phase: **E (demo.sh + CI e2e)** — IN PROGRESS. The lifecycle *is* implemented end to end (create → propose → approve at full M → execute); what is missing is a completed unattended run.
 - Last green SC: SC-D.1–SC-D.5 (Phase D). Phase E: SC-E.3/E.5/E.7 green; E.1/E.4/E.6 not met
-- Blockers: **Phase E** — the `e2e-sequencer` CI job is wired (every push to `main`, not cron, not path-filtered) but has not yet completed. Each run has failed further along than the last: missing guest toolchain → missing `libpcsclite` → a SIGPIPE panic in our own script (`docs/tried-failed.md`). Every failure so far has been a real defect, and the job fails rather than faking a pass. The build itself is large: a full blockchain node plus a C++ groth16 stack, ~12 min before anything else starts. (#105 eligibility: operator decided 2026-09-04 to proceed through Phase I — `docs/phase-N1-status.md` §3.)
+- Blockers: **the testnet was reset** on 2026-09-08 — chain height went back to 19 and the
+  deployment at blocks 43002–43065 is gone, so it is being redeployed. **The Basecamp module** is
+  built and packaged correctly but has not been shown loading. **The video** is not recorded.
+  Everything else is locked with command evidence — see [agent-lock-brief.md](agent-lock-brief.md).
+  (Historic: the `e2e-sequencer` job was wired and had not completed; it went green on
+  2026-09-06, run 34052567273, 3 h 41 m.) Each run has failed further along than the last: missing guest toolchain → missing `libpcsclite` → a SIGPIPE panic in our own script (`docs/tried-failed.md`). Every failure so far has been a real defect, and the job fails rather than faking a pass. The build itself is large: a full blockchain node plus a C++ groth16 stack, ~12 min before anything else starts. (#105 eligibility: operator decided 2026-09-04 to proceed through Phase I — `docs/phase-N1-status.md` §3.)
 
 - Remote: https://github.com/pramadanif/lp0002 (public)
 

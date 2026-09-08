@@ -7,29 +7,29 @@ testnets are wiped, and a dead evidence link fails plan gate W2.
 |-------|-------|
 | RPC | `https://testnet.lez.logos.co` |
 | Explorer | `https://explorer.testnet.lez.logos.co` |
-| Deployed at | 2026-09-08T12:44:45Z |
-| Commit | `6d58773095d56f4fcdcd51a442d5474c004436a3` |
-| Payer | `Public/2gvvViSn7tP69qE9T1qxHbCsHs7idDYrcbMDZ8RoEqU8` |
-| config_hash | `54e647c221fcf09d1e3b09dc57f6ad218df40a1a4b34a3ba5e919d4e78e0d656` |
-| proposal_seed | `1191e3e96f73b825c2fcd839b3477ae334dd7d2d048b83a525bfe01fb4d91271` |
+| Deployed at | 2026-09-08T15:25:14Z |
+| Commit | `f4f77752ca6767d35c178b79c9ad433c9b9ac063` |
+| Payer | `Public/48sQxHMb6X1vRCZN1AHc77vjDxocZhibr1qjG9HD86zu` |
+| config_hash | `99cff7fa1f0c4fa267f29d34baafd720906a0e4259e013bc2ca42ac53498fbe4` |
+| proposal_seed | `f47f48e87e171ea02816f28fe542e50677a36f23f948e7956db994a9aefba255` |
 | Threshold | 2-of-3 (**full M** — no lowered tier) |
 
 ## Programs
 
 | Program | ImageID (= ProgramId) | Deployment tx |
 |---------|----------------------|---------------|
-| `membership` | `960db4f24de1f1b0ebdc064a9be1246bde0e6a06f8be7f349fa562cc4207eade` | [`fe3a65ee4127a821…`](https://explorer.testnet.lez.logos.co/transaction/fe3a65ee4127a821847514d0350df479c86cb9b6d14c399c5608b36dde333fdc) (block 38661) |
-| `multisig` | `79cf1dbaffe6295ce97af319e139220380d3da8ed4a877a12fd35cedc4a60468` | [`ef9029b2a9d4ef8c…`](https://explorer.testnet.lez.logos.co/transaction/ef9029b2a9d4ef8c261e02af21b9a099ceba510a58a05407ff4a60714bb08d4e) (block 40565) |
+| `membership` | `960db4f24de1f1b0ebdc064a9be1246bde0e6a06f8be7f349fa562cc4207eade` | [`fe3a65ee4127a821…`](https://explorer.testnet.lez.logos.co/transaction/fe3a65ee4127a821847514d0350df479c86cb9b6d14c399c5608b36dde333fdc) (block 62) |
+| `multisig` | `79cf1dbaffe6295ce97af319e139220380d3da8ed4a877a12fd35cedc4a60468` | [`ef9029b2a9d4ef8c…`](https://explorer.testnet.lez.logos.co/transaction/ef9029b2a9d4ef8c261e02af21b9a099ceba510a58a05407ff4a60714bb08d4e) (block 63) |
 
 ## Lifecycle
 
 | # | Step | Transaction |
 |---|------|-------------|
-| 1 | create_multisig | [`d64d35664fd77d86…`](https://explorer.testnet.lez.logos.co/transaction/d64d35664fd77d862375436e953990a665127857a4e90ebe0eda8ee4a24bedec) |
-| 2 | create_proposal | [`1102908e72323d0b…`](https://explorer.testnet.lez.logos.co/transaction/1102908e72323d0b1d4948dc2e21082ace20317e55427ade65947f5374d54cde) |
-| 3 | approve (anonymous, privacy-preserving) | [`b84980b36e006b19…`](https://explorer.testnet.lez.logos.co/transaction/b84980b36e006b1953ecbdad941958496fed6c8951a170086aee530c7b24b697) |
-| 4 | approve (anonymous, privacy-preserving) | [`5234e72be52b68ae…`](https://explorer.testnet.lez.logos.co/transaction/5234e72be52b68ae50d9ad1d605c1776469e4c409c7e1a53ab2031f59b752888) |
-| 5 | execute | [`c226f747f62d9c83…`](https://explorer.testnet.lez.logos.co/transaction/c226f747f62d9c83f84505f22617ada091eb597db7ec47c1e74e5fb3ebf08bb7) |
+| 1 | create_multisig | [`007d9ff27063b398…`](https://explorer.testnet.lez.logos.co/transaction/007d9ff27063b39843af29443abbcd40923de9fc4a17d9963d0521b9217e8a13) |
+| 2 | create_proposal | [`aa14aa283a0cdb5d…`](https://explorer.testnet.lez.logos.co/transaction/aa14aa283a0cdb5de76fee512a24aff1da30e73a6ae88cc7079a621e2a3db1d3) |
+| 3 | approve (anonymous, privacy-preserving) | [`a3eaeb3a773f35a4…`](https://explorer.testnet.lez.logos.co/transaction/a3eaeb3a773f35a48935944ca1b15bed683265dbded90633c094e4ef56aa4f4b) |
+| 4 | approve (anonymous, privacy-preserving) | [`2a283d3c8887ef55…`](https://explorer.testnet.lez.logos.co/transaction/2a283d3c8887ef552bf56f415bbd6b534a4424e0765b590f3b44f6f6215a0aaa) |
+| 5 | execute | [`d1a47fddeddbfebd…`](https://explorer.testnet.lez.logos.co/transaction/d1a47fddeddbfebd1a387f52ac91ecaed43f8c20275d6fb82bf3acd2f460057e) |
 
 ## Reproducing
 

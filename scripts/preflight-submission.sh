@@ -149,6 +149,13 @@ else
   ok "PF-08" "cu-costs.md has numeric on-chain CU per instruction"
 fi
 
+# PF-07b — the checklist must agree with itself
+if python3 scripts/check-criteria-summary.py >/dev/null 2>&1; then
+  ok "PF-07" "the criteria checklist's summary matches its own rows"
+else
+  bad "PF-07" "criteria-checklist.md summary disagrees with its rows — run scripts/check-criteria-summary.py"
+fi
+
 # PF-09 — deployment evidence + live explorer links
 if [[ ! -s docs/DEPLOYMENT.md ]]; then
   pend "PF-09" "docs/DEPLOYMENT.md not written yet (Phase G)"
