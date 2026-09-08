@@ -70,7 +70,22 @@ grep -q 'All looks good' "$HOME_DIR/.health.log" || { tail -5 "$HOME_DIR/.health
 info "connected"
 
 w account list > "$HOME_DIR/.accounts.log" || true
-ACC=$(awk '/Public\//{print $2}' "$HOME_DIR/.accounts.log" | head -1)
+# Not `head -1`: a wallet that has run a deployment holds more than one public account, and the
+# payee can sort ahead of the payer. Funding the wrong one leaves the payer empty and the run fails
+# a step later blaming an empty wallet. PMSIG_ACCOUNT names it; otherwise take the one that already
+# holds the most, which is the payer in every wallet this script is pointed at.
+ACC="${PMSIG_ACCOUNT:-}"
+if [[ -z "$ACC" ]]; then
+  best=-1
+  while read -r pub; do
+    [[ -n "$pub" ]] || continue
+    b=$(curl -s -X POST "$RPC" -H 'content-type: application/json' \
+      --data "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"getAccountBalance\",\"params\":[\"${pub#Public/}\"]}" \
+      --max-time 20 | jq -r '.result // 0')
+    [[ "$b" =~ ^[0-9]+$ ]] || b=0
+    if (( b > best )); then best=$b; ACC=$pub; fi
+  done < <(awk '/Public\//{print $2}' "$HOME_DIR/.accounts.log")
+fi
 [[ -n "$ACC" ]] || die "the wallet has no public account"
 ID=${ACC#Public/}          # `account list` already includes the prefix; re-adding it fails
 info "payer $ID"
