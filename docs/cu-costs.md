@@ -97,11 +97,13 @@ approvals back to back on the same laptop:
 
 | | Approval 1 | Approval 2 |
 |-|-----------|-----------|
-| Proving time | ~20 min | **21 min** |
+| Proving time | **22 min** | **21 min** |
 | Peak r0vm RSS observed | 8.1 GB | **9.2 GB** |
 
-So the figure above holds: about twenty minutes and roughly nine gigabytes, twice more, on a
-different day, from the committed reproducible guests.
+So the figure above holds, at the slower end of it: about twenty minutes and roughly nine
+gigabytes, twice more, on a different day, from the committed reproducible guests. The laptop was
+running a Basecamp build and this agent's own tooling at the time, which is the likeliest reason
+both are above the 19 min 26 s measured on an otherwise idle machine.
 
 Both numbers here are **sampled**, not maxima. The run's heartbeat reads r0vm's resident set once a
 minute, so a spike between samples is invisible to it; 8.74 GB in the table above came from a
