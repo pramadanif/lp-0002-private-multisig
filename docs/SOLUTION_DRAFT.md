@@ -1,8 +1,8 @@
 # Solution: LP-0002 — Private M-of-N Multisig for LEZ
 
-**Status: the full lifecycle runs on the LEZ public testnet.** One item remains outstanding and is
-listed below rather than glossed. See "What is not done" before
-reading anything here as a claim.
+**Status: the full lifecycle runs on the LEZ public testnet, and the Basecamp module reads it.**
+What is outstanding is listed below rather than glossed — read "What is not done" before taking
+anything here as a claim.
 
 **Submitted by:** pramadanif
 **Repository:** https://github.com/pramadanif/lp0002
@@ -143,27 +143,37 @@ was approved (INV-7), that the treasury holds exactly the remainder, and that th
 Listed first-class, because the difference between built and demonstrated is what this prize's gates
 test:
 
-- **The Basecamp module installs, and its UI has not been driven on camera.** The package installs
-  through Basecamp's own "Install Local Package" and is listed as `ui_qml`, and the plugin loads
-  under Basecamp's Qt — verified by `dlopen` against the application's own frameworks. What is not
-  yet shown is the window open and doing something. It also carries only the `darwin-arm64` variant.
+- **The Basecamp module loads, and its panels read the chain — but no UI has been driven on
+  camera yet.** `app/private_multisig.lgx` — 2,631,589 bytes, sha256 `5d6f70f3…0fad98a0` — installs
+  through Basecamp's own "Install Local Package", is listed as `ui_qml`, and opens from
+  Applications → Blockchain.
 
-  Getting there took three fixes worth stating, because each fails silently and none is documented:
-  `lgx` 0.1.0 writes a package format Basecamp 0.2.3 cannot read; the plugin must be built against
-  the Qt the host ships (6.9.2, not the newest installed); and the linker's absolute paths to the
-  build machine have to be rewritten. See [basecamp-load.md](basecamp-load.md).
+  Four undocumented facts stood in the way, each of which fails silently:
 
-- **The Basecamp module loads, and its panels read the chain.** `app/private_multisig.lgx` —
-  2,631,589 bytes, sha256 `5d6f70f3…0fad98a0` — installs in Logos Basecamp 0.2.3 and opens from
-  Applications → Blockchain. Getting the panels to *do* anything took one more undocumented fact:
-  a `ui_qml` module's QML runs in Basecamp's main process while its plugin runs in a `ui-host`
-  child, so the context property the scaffold set on its own engine was never in scope. Every
-  binding raised `ReferenceError: backend is not defined` behind a window that drew perfectly.
-  The plugin now publishes the API the way Basecamp's own modules do and the QML resolves it
-  through `logos.module()`; `./scripts/check-basecamp-contract.sh` asserts both halves and, with
-  `PMSIG_CONTRACT_LIVE=1`, fetches the deployed config through the plugin's own slots. The package
-  carries only the `darwin-arm64` variant, built on the machine that produced it.
+  1. `lgx` 0.1.0 writes a package format Basecamp 0.2.3 cannot read — the install logs
+     `installPlugin` and then nothing at all.
+  2. The plugin must be built against the Qt the host ships (6.9.2, not the newest installed): Qt's
+     version tag symbol makes a 6.11 build unloadable, and Basecamp does not log `dlopen` failures.
+  3. The linker's absolute paths to the build machine have to be rewritten.
+  4. A `ui_qml` module's QML runs in Basecamp's **main** process while its plugin runs in a
+     `ui-host` child. The generated scaffold set `backend` as a context property on the engine it
+     built itself — an engine Basecamp never renders — so every binding raised
+     `ReferenceError: backend is not defined` behind a window that drew perfectly, and no button did
+     anything.
+
+  The plugin now publishes its API the way Basecamp's own modules do, and the QML resolves it
+  through `logos.module()`. `./scripts/check-basecamp-contract.sh` asserts both halves of that
+  contract and, with `PMSIG_CONTRACT_LIVE=1`, fetches the deployed config through the plugin's own
+  slots — the path a press of ↻ takes — decoding the same 2-of-3 `verify-onchain.sh` reads. CI runs
+  it. What is not yet shown is the window open and doing that on camera. The package also carries
+  only the `darwin-arm64` variant. See [basecamp-load.md](basecamp-load.md).
+
 - **No narrated video.** P-S6 unmet.
+
+- **The public explorer has not indexed all of the evidence.** Every transaction answers over
+  JSON-RPC and `verify-onchain.sh` reads them all; the explorer renders the two program deployments
+  but not yet the five lifecycle transactions. `./scripts/check-explorer-links.sh` says which, and
+  exits 75 rather than passing quietly.
 
 Full list: [limitations.md](limitations.md).
 
