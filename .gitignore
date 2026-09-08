@@ -13,3 +13,4 @@ app/*.lgx.bak
 app/.lgx-staging/
 app/build/PrivateMultisigApp
 app/build/lib*_plugin.*
+app/build/
