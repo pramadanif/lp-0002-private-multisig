@@ -61,6 +61,16 @@ chain_has() {
 
 fail=0
 for url in "${urls[@]}"; do
+  # A JSON-RPC endpoint is not a web page. It answers POST and refuses GET with 405, which is the
+  # endpoint working, not a dead link — and this URL is in DEPLOYMENT.md precisely so a reader can
+  # query it. Ask it the way it expects to be asked.
+  if [[ "$url" != */transaction/* && "$url" != */account/* ]] \
+     && curl -s -X POST "$url" -H 'content-type: application/json' \
+          --data '{"jsonrpc":"2.0","id":1,"method":"checkHealth","params":[]}' \
+          --max-time 20 2>/dev/null | grep -q '"result"'; then
+    printf '  OK   %s  (JSON-RPC, answers checkHealth)\n' "$url"
+    continue
+  fi
   code=$(curl -s -o /tmp/explorer-body.$$ -w '%{http_code}' -L --max-time 25 "$url" || echo 000)
   body_says_missing=0
   if grep -qiE 'not found|no such transaction|does not exist|null' /tmp/explorer-body.$$ 2>/dev/null; then
