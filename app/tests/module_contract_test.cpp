@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
     const QMetaObject* mo = plugin->metaObject();
     qInfo().noquote() << "plugin class:" << mo->className();
 
-    for (const char* p : {"config", "proposal", "busy", "lastError", "lastTxHash", "lastResult",
+    for (const char* p : {"config", "proposal", "fetchErrors", "busy", "lastError", "lastTxHash", "lastResult",
                           "walletPath", "sequencerUrl", "programIdHex", "walletCliDir", "connectionStatus",
                           "walletAccounts", "walletAccountInfo", "walletDecodedAccount"}) {
         check(hasProperty(mo, p), QStringLiteral("property %1 is published and notifies").arg(p));
@@ -204,6 +204,23 @@ int main(int argc, char** argv) {
             qInfo().noquote() << "        lastError:" << plugin->property("lastError").toString();
         }
 
+        // A fetch that finds nothing must say why. This is the case that used to report success and
+        // leave the "No data" placeholder up, which reads as an empty account rather than a
+        // misconfigured one.
+        QMetaObject::invokeMethod(plugin, "fetchConfig",
+                                  Q_ARG(QString, QString(64, QLatin1Char('0'))));
+        clock.restart();
+        QString absent;
+        while (clock.elapsed() < 60000) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+            absent = plugin->property("fetchErrors").toMap().value("config").toString();
+            if (!absent.isEmpty()) break;
+        }
+        check(absent.contains(qEnvironmentVariable("PMSIG_SEQUENCER_URL"))
+                  && absent.contains(qEnvironmentVariable("PMSIG_PROGRAM_ID")),
+              QStringLiteral("a fetch that finds nothing names the sequencer and program id it used"));
+        if (!absent.isEmpty()) qInfo().noquote() << "        " << absent;
+
         // The wallet pages do not talk to the chain over the FFI's client — they run LEZ's `wallet`
         // binary, which is resolved through PATH and so is the one part of the module that a host
         // with a different environment breaks silently.
@@ -225,6 +242,30 @@ int main(int argc, char** argv) {
 
     // Tear the tree down while its context is still alive, so the run ends quietly.
     delete rootObj;
+
+    // ── 4. The write paths are connected too ────────────────────────────────────────────────────
+    //
+    // The read panels prove the plugin reaches the chain. The instruction panels take a different
+    // route — dispatchFfi, a worker thread, then operationSuccess or operationError — and a slot
+    // that quietly did nothing would look identical to one still working. Called with an argument
+    // the FFI must reject, a connected path answers; a disconnected one stays silent.
+    {
+        // "not-hex" cannot be a 32-byte seed, so this fails inside the FFI and never reaches a
+        // sequencer — nothing is submitted and no funds move.
+        QMetaObject::invokeMethod(plugin, "execute", Q_ARG(QString, QStringLiteral("not-hex")),
+                                  Q_ARG(QString, QStringLiteral("not-hex")));
+        QElapsedTimer clock;
+        clock.start();
+        QString err;
+        while (clock.elapsed() < 30000) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+            err = plugin->property("lastError").toString();
+            if (!err.isEmpty()) break;
+        }
+        check(!err.isEmpty(),
+              QStringLiteral("an instruction slot reports failure rather than silently doing nothing"));
+        if (!err.isEmpty()) qInfo().noquote() << "        " << err.left(120);
+    }
 
     qInfo().noquote() << (g_failures == 0 ? "contract holds" : "CONTRACT BROKEN");
     return g_failures == 0 ? 0 : 1;

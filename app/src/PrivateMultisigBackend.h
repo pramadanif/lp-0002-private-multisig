@@ -20,6 +20,10 @@ class PrivateMultisigBackend : public QObject {
     // ── Fetched state ─────────────────────────────────────────────────────
     Q_PROPERTY(QVariantMap config READ config NOTIFY configChanged)
     Q_PROPERTY(QVariantMap proposal READ proposal NOTIFY proposalChanged)
+    // Why not lastError: that carries whatever failed most recently anywhere, including the account
+    // listing this runs at startup. Bound into the Config panel it made an unrelated failure look
+    // like a failed fetch. Keyed by "config"/"proposal", each panel shows only its own.
+    Q_PROPERTY(QVariantMap fetchErrors READ fetchErrors NOTIFY fetchErrorsChanged)
 
     // ── Async status ──────────────────────────────────────────────────────
     Q_PROPERTY(bool       busy       READ busy       NOTIFY busyChanged)
@@ -45,6 +49,7 @@ public:
 
     QVariantMap config() const { return m_config; }
     QVariantMap proposal() const { return m_proposal; }
+    QVariantMap fetchErrors() const { return m_fetchErrors; }
 
     bool       busy()       const { return m_busy; }
     QString    lastError()  const { return m_lastError; }
@@ -87,6 +92,7 @@ public:
 signals:
     void configChanged();
     void proposalChanged();
+    void fetchErrorsChanged();
     void busyChanged();
     void lastErrorChanged();
     void lastTxHashChanged();
@@ -120,6 +126,7 @@ private:
 
     QVariantMap m_config;
     QVariantMap m_proposal;
+    QVariantMap m_fetchErrors;
 
     bool       m_busy      = false;
     QString    m_lastError;

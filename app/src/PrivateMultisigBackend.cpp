@@ -275,12 +275,16 @@ void PrivateMultisigBackend::applyFetched(const QString& what,
             "program %3).")
             .arg(what, m_sequencerUrl,
                  m_programIdHex.isEmpty() ? QStringLiteral("(unset)") : m_programIdHex);
+        m_fetchErrors[what] = m_lastError;
+        emit fetchErrorsChanged();
         emit lastErrorChanged();
         emit operationError("fetch_" + what, m_lastError);
         return;
     }
     target = state;
     (this->*changed)();
+    m_fetchErrors.remove(what);
+    emit fetchErrorsChanged();
     m_lastError.clear();
     emit lastErrorChanged();
 }

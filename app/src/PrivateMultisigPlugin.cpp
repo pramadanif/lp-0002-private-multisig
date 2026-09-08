@@ -29,6 +29,7 @@ PrivateMultisigBackend* PrivateMultisigPlugin::backend() const {
 	using P = PrivateMultisigPlugin;
 	connect(m_backend, &B::configChanged,               self, &P::configChanged);
 	connect(m_backend, &B::proposalChanged,             self, &P::proposalChanged);
+	connect(m_backend, &B::fetchErrorsChanged,          self, &P::fetchErrorsChanged);
 	connect(m_backend, &B::busyChanged,                 self, &P::busyChanged);
 	connect(m_backend, &B::lastErrorChanged,            self, &P::lastErrorChanged);
 	connect(m_backend, &B::lastTxHashChanged,           self, &P::lastTxHashChanged);
@@ -75,6 +76,7 @@ void PrivateMultisigPlugin::destroyWidget(QWidget* widget) {
 
 QVariantMap  PrivateMultisigPlugin::config() const { return backend()->config(); }
 QVariantMap  PrivateMultisigPlugin::proposal() const { return backend()->proposal(); }
+QVariantMap  PrivateMultisigPlugin::fetchErrors() const { return backend()->fetchErrors(); }
 bool         PrivateMultisigPlugin::busy() const { return backend()->busy(); }
 QString      PrivateMultisigPlugin::lastError() const { return backend()->lastError(); }
 QString      PrivateMultisigPlugin::lastTxHash() const { return backend()->lastTxHash(); }

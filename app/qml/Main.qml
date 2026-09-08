@@ -398,10 +398,11 @@ Item {
                         // hash from a different deployment.
                         Text {
                             visible: Object.keys(backend.config).length === 0
-                            text: backend.lastError.length > 0
-                                  ? "\u2717 " + backend.lastError
+                            property string _err: backend.fetchErrors["config"] || ""
+                            text: _err.length > 0
+                                  ? "\u2717 " + _err
                                   : "No data — press \u21ba to fetch."
-                            color: backend.lastError.length > 0 ? root.colError : root.colMuted
+                            color: _err.length > 0 ? root.colError : root.colMuted
                             font.pixelSize: 12
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                             Layout.fillWidth: true
@@ -502,10 +503,11 @@ Item {
                         // hash from a different deployment.
                         Text {
                             visible: Object.keys(backend.proposal).length === 0
-                            text: backend.lastError.length > 0
-                                  ? "\u2717 " + backend.lastError
+                            property string _err: backend.fetchErrors["proposal"] || ""
+                            text: _err.length > 0
+                                  ? "\u2717 " + _err
                                   : "No data — press \u21ba to fetch."
-                            color: backend.lastError.length > 0 ? root.colError : root.colMuted
+                            color: _err.length > 0 ? root.colError : root.colMuted
                             font.pixelSize: 12
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                             Layout.fillWidth: true

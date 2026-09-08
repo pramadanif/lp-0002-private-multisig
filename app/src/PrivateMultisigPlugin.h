@@ -45,6 +45,7 @@ class PrivateMultisigPlugin : public QObject, public IComponent {
 	// ── Fetched state ─────────────────────────────────────────────────────
 	Q_PROPERTY(QVariantMap config READ config NOTIFY configChanged)
 	Q_PROPERTY(QVariantMap proposal READ proposal NOTIFY proposalChanged)
+	Q_PROPERTY(QVariantMap fetchErrors READ fetchErrors NOTIFY fetchErrorsChanged)
 
 	// ── Async status ──────────────────────────────────────────────────────
 	Q_PROPERTY(bool        busy       READ busy       NOTIFY busyChanged)
@@ -75,6 +76,7 @@ public:
 
 	QVariantMap  config() const;
 	QVariantMap  proposal() const;
+	QVariantMap  fetchErrors() const;
 	bool         busy() const;
 	QString      lastError() const;
 	QString      lastTxHash() const;
@@ -113,6 +115,7 @@ public slots:
 signals:
 	void configChanged();
 	void proposalChanged();
+	void fetchErrorsChanged();
 	void busyChanged();
 	void lastErrorChanged();
 	void lastTxHashChanged();
