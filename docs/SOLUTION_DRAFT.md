@@ -68,9 +68,11 @@ camera reading chain state. The URL will be placed here and in the Repository li
 - **CU costs:** [`docs/cu-costs.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/cu-costs.md)
 - **Limitations:**
   [`docs/limitations.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/limitations.md)
-- **CI e2e with `RISC0_DEV_MODE=0`:**
-  [run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322) — 2 h 54 m, green;
-  two proofs of 75 minutes each on a 4-core runner, then execute at full M
+- **CI e2e with `RISC0_DEV_MODE=0`:** green twice.
+  [Run 34302452494](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34302452494) — **all eleven jobs green**, the e2e job 3 h 40 m, two proofs of 96 minutes
+  each on a 4-core runner, then execute at full M, ending `VERIFIED from public chain data alone`.
+  Earlier, [run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322)
+  — 2 h 54 m, same lifecycle
 
 ```bash
 shasum -a 256 app/private_multisig.lgx     # must print the sha256 above
@@ -255,9 +257,10 @@ which carries the full evidence for each.
 **Supportability**
 
 - [x] **P-S1** Deployed and tested on LEZ testnet — see the deployment table
-- [x] **P-S2** E2E tests against a **standalone** LEZ sequencer in CI —
-      [run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322), 2 h 54 m,
-      two 75-minute proofs at `RISC0_DEV_MODE=0`
+- [x] **P-S2** E2E tests against a **standalone** LEZ sequencer in CI — [run 34302452494](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34302452494),
+      all eleven jobs green, the e2e job 3 h 40 m, two 96-minute proofs at `RISC0_DEV_MODE=0`; and
+      earlier [run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322),
+      2 h 54 m
 - [x] **P-S3** CI green on the default branch
 - [x] **P-S4** README documents E2E usage: deploy steps, addresses, CLI **and** Basecamp
 - [x] **P-S5** Reproducible `./demo.sh` against a real local sequencer with `RISC0_DEV_MODE=0`
@@ -320,7 +323,7 @@ for the upstream papercuts. Every claim in this file has a script behind it that
 - [`docs/tried-failed.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/tried-failed.md) — mistakes made, and how each was caught
 - [`docs/BUGS_FILED.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/BUGS_FILED.md) — upstream LEZ / SPEL / Basecamp findings
 - [`scripts/verify-onchain.sh`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/scripts/verify-onchain.sh) · [`demo.sh`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/demo.sh)
-- [CI e2e run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322)
+- CI e2e runs [34302452494](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34302452494) and [34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322)
 
 **The prize demo is `./demo.sh`.** It drives a real standalone LEZ sequencer with
 `RISC0_DEV_MODE=0`. `demo-fast.sh` is a development tour, generates no proof, and is **not** cited as

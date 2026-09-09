@@ -20,13 +20,28 @@ $ curl -o /dev/null -w '%{http_code}' https://github.com/pramadanif/lp0002
 | Location | Old URL? | New URL? | Action |
 |----------|----------|----------|--------|
 | `git remote origin` | no | yes | already correct |
-| `Cargo.toml` `repository` | no | yes | already correct |
+| `Cargo.toml` `repository` | **YES** | now yes | **fixed in this same commit — see the correction below** |
 | `app/manifest.json` `homepage` | no | yes | already correct |
 | README, SOLUTION_DRAFT, DEPLOYMENT, criteria-checklist, basecamp-load, limitations, video-transcript, TRACKING, phase-\*, reviewer-gaps | no | yes | already correct |
 | CI workflow, `app/metadata.json` | no | — | no repo URL in either |
 | **`app/private_multisig.lgx` — the manifest *inside* the shipped package** | **YES** | now yes | **rebuilt** |
 
-Nothing in the working tree referenced the old name. The one place that did was the artefact a
+> **Correction, 2026-09-09.** The line above originally read "Nothing in the working tree
+> referenced the old name", and the `Cargo.toml` row said "already correct". Both were wrong, and
+> this audit is the document that should have caught it:
+>
+> ```
+> $ git show a8755b4:Cargo.toml | grep '^repository'
+> repository = "https://github.com/pramadanif/lp0002"     # the commit before this audit
+> $ git show 3dc9f62:Cargo.toml | grep '^repository'
+> repository = "https://github.com/pramadanif/lp-0002-private-multisig"
+> ```
+>
+> `Cargo.toml` did carry the old URL, and the same commit that added this audit fixed it. The fix
+> was real; the report of it was not. It surfaced days later from an unrelated question — "what has
+> changed since the last green CI run" — which is the sort of luck a checklist exists to replace.
+
+So: two places carried the old name — `Cargo.toml`, fixed in the audit commit, and the artefact a
 reviewer actually installs.
 
 ## The `.lgx`, which is the point of this audit
@@ -52,7 +67,7 @@ https://github.com/pramadanif/lp0002                            # L2 — shipped
 | Bytes | 2,664,623 | **2,664,654** |
 | `type` / `category` | `ui_qml` / `blockchain` | unchanged — `ui_qml` / `blockchain` |
 | Replica factory present | yes | yes |
-| Old name anywhere in the archive | 1 occurrence | **0** |
+| Old name anywhere in the archive | 1 occurrence | **0** — re-verified, see below |
 
 The new hash and size were synced into `docs/basecamp-load.md`, `docs/SOLUTION_DRAFT.md`,
 `docs/criteria-checklist.md` (P-U2), `docs/phase-F-status.md` and `docs/agent-lock-brief.md`. The
@@ -64,6 +79,25 @@ README does not hardcode the hash; it links to `basecamp-load.md`.
 > in the table above are the rename rebuild's, kept as the record of that measurement. The embedded
 > `homepage` was re-checked after the icon rebuild and is still the new URL, and the archive still
 > contains zero occurrences of the old name.
+
+### How to scan the archive, because the obvious way does not work
+
+`tar xzOf <archive>` with no member named writes **nothing** on BSD tar, which is what macOS ships.
+Piping that into `grep` therefore reports every package clean, including one with the old URL
+planted in it — measured, not assumed:
+
+```
+$ tar xzOf app/private_multisig.lgx | grep -c 'pramadanif/lp0002'      # planted package
+0                                                                       # a lie
+$ D=$(mktemp -d); tar xzf app/private_multisig.lgx -C "$D"
+$ grep -rl 'pramadanif/lp0002' "$D"
+$D/manifest.json                                                        # the truth
+```
+
+The current package really is clean — 0 hits across all 8 members by the second method, and the
+shipped `homepage` reads the new URL. The conclusion was right; the command that reached it was
+worthless. Preflight **PF-18** now runs the extracting version on every check, and it was tested
+against the planted package to prove it fails.
 
 ## Operator action required
 

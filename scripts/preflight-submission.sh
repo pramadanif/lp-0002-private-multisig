@@ -299,6 +299,41 @@ else
   ok "PF-16" "no tracked file contains an approval witness"
 fi
 
+# PF-18 — no tracked file may carry the repository's old name.
+# GitHub redirects a renamed repo, so a stale URL never 404s: it resolves, looks fine, and reads
+# wrong to the one reviewer who notices. That is why this needs a gate rather than an audit —
+# docs/agent-rename-audit.md was the audit, and it reported Cargo.toml clean while Cargo.toml still
+# carried the old name. The audit itself is the one file allowed to quote the old name, because
+# quoting it is what that document is for; everything else, including the shipped package, must be
+# free of it.
+# Assembled from two halves so this file does not itself contain the string it forbids: the
+# check failed on its own source the first time it ran.
+OLD_NAME="pramadanif/lp""0002"
+STALE=$(git grep -l -- "$OLD_NAME" -- . 2>/dev/null | grep -v '^docs/agent-rename-audit\.md$' || true)
+if [[ -n "$STALE" ]]; then
+  bad "PF-18" "tracked file(s) still name the old repository: $(echo "$STALE" | tr '\n' ' ')"
+else
+  # Unpack to scan. `tar xzOf <archive>` with no member names writes NOTHING on BSD tar, so the
+  # obvious one-liner reports every package clean — it was the first version of this check, and it
+  # passed a package with the old URL deliberately planted in it. Extracting is the boring way and
+  # the one that actually reads the bytes.
+  PKG_HIT=""
+  if [[ -f app/private_multisig.lgx ]]; then
+    PKG_DIR=$(mktemp -d)
+    if tar xzf app/private_multisig.lgx -C "$PKG_DIR" 2>/dev/null; then
+      PKG_HIT=$(grep -rl -- "$OLD_NAME" "$PKG_DIR" 2>/dev/null | sed "s|^$PKG_DIR/||" | tr '\n' ' ')
+    else
+      PKG_HIT="<the package could not be unpacked>"
+    fi
+    rm -rf "$PKG_DIR"
+  fi
+  if [[ -n "$PKG_HIT" ]]; then
+    bad "PF-18" "the shipped .lgx still names the old repository in: $PKG_HIT — rebuild it"
+  else
+    ok "PF-18" "no tracked file and no shipped package names the old repository"
+  fi
+fi
+
 # PF-17 — the commit SOLUTION_DRAFT names must be one this repository actually has.
 # A pin nobody can check out is worse than no pin: a judge who tries it gets "unknown revision" and
 # has no way to tell a typo from a force-push. Lagging HEAD is fine and expected while work

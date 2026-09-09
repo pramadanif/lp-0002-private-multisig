@@ -13,7 +13,7 @@ was done. Measured 2026-09-09.
 | `verify-onchain.sh` | **exit 0** — 2-of-3, full M, INV-7 satisfied, `VERIFIED from public chain data alone` |
 | `check-explorer-links.sh` | **exit 75** — 22 of 27 evidence URLs resolve; five lifecycle transactions are on chain and not yet indexed (two of the seven have since appeared, so the indexer is progressing) |
 | `preflight-submission.sh` | `pass=18 fail=0 pending=2` (PF-09 explorer index, PF-12 video) |
-| CI e2e green | run [34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322) on pin `c530fc8`, 2 h 54 m, two 75-minute proofs at `RISC0_DEV_MODE=0` |
+| CI e2e green | **twice.** Run [34302452494](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34302452494) on pin `a8755b4` — all eleven jobs green, e2e 3 h 40 m, two 96-minute proofs at `RISC0_DEV_MODE=0`. Before it, run [34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322) on pin `c530fc8`, 2 h 54 m |
 | Upstream race | **PR #143 is OPEN** — "LP-0002 — Private M-of-N Multisig (resubmission of #133)", opened 2026-09-08 20:53 UTC |
 
 ## Gap table — `SOLUTION_DRAFT.md` against the LP-0000 template
