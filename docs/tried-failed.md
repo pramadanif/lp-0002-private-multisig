@@ -301,3 +301,50 @@ which behaves the same on both, and a failure now aborts loudly instead of being
 
 **What it cost to find:** nothing but reading a file before publishing it. **What it would have cost
 not to:** the one secret this entire prize is about, in public, in the repository submitted to win it.
+
+## Verifying a Basecamp module against a stub I wrote myself
+
+2026-09-09. For most of a night this repository claimed the Basecamp module "reads the chain". It
+does not — not inside Basecamp.
+
+`check-basecamp-contract.sh` loads the real plugin, loads the real `Main.qml`, and gives the QML a
+`logos` object with one method: `module(name)`, returning the plugin. Every assertion passed, live
+against the testnet. The trouble is that the stub was written from a reading of Basecamp's own
+`package_manager_ui`, and it modelled a host that hands the QML the object directly. The real host
+does not:
+
+```
+LogosQmlBridge: no replica factory plugin registered for "private_multisig"
+```
+
+Basecamp loads a **second** plugin — beside the first, named for the module, IID
+`logos.view.replica_factory/1.0` — and asks *it* to construct the replica. `package_manager_ui` ships
+one; we did not. Without it `logos.module()` returns null, and the module's own footer said so in red
+the whole time: **backend unavailable**. The evidence was on screen in the first screenshot and I
+read past it, because my own check was green.
+
+**The lesson is about the shape of the test, not the bug.** A stub written by the same person who
+wrote the code, from the same reading of the same reference, tests that reading — not the world. It
+passed for the same reason the module failed.
+
+### And the first fix crashed the application
+
+The interface is undocumented and Basecamp ships no headers, so it was reconstructed from the
+reference plugin's vtable: the secondary sub-vtable begins directly with `acquire`, so there is no
+virtual destructor, and `replicaMetaObject()` comes second. That much was read out of the binary
+rather than guessed. The plugin built, loaded, and returned a replica in a test harness.
+
+In Basecamp it crashed the application on startup — three times, in Basecamp's own QML url
+interceptor, compiling a regex through PCRE2's JIT, with no frame of ours in the backtrace. Three
+explanations were formed and all three were **tested and disproved**:
+
+| Theory | Test | Result |
+|--------|------|--------|
+| An `LC_RPATH` to this machine's Qt pulled a second QtCore into the process | Load it under a host running Basecamp's own Qt and count mapped QtCore images | One before, one after — dyld reuses the already-loaded framework |
+| Two Qt copies regardless of rpath | Same measurement with the rpath stripped | Identical |
+| Ad-hoc signature costs the process its JIT entitlement | Sign a test host `-o runtime` with `com.apple.security.cs.allow-jit`, load the dylib, force a PCRE2 JIT compile | Compiles and matches happily |
+
+So the cause is still unknown, and the factory stays out of the package until it is known. What is
+recorded here instead of a fix is the discipline that produced three dead ends cheaply: each theory
+was stated, given a measurement that could refute it, and dropped when it was refuted — rather than
+shipped as a plausible story.

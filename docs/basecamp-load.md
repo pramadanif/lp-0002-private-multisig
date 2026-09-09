@@ -53,8 +53,11 @@ Then, on **Config**, paste the `config_hash` and press ↻; on **Proposal**, the
 
 ## What each panel does, and how that was checked
 
-Against the deployment in [DEPLOYMENT.md](DEPLOYMENT.md), through the plugin's own slots — the same
-path the buttons take.
+**Read this first.** Everything in the table below was measured by driving the plugin's own slots
+from `scripts/check-basecamp-contract.sh`, against the live deployment in
+[DEPLOYMENT.md](DEPLOYMENT.md). That is the same code the buttons call — but it is **not** the same
+host. Inside Logos Basecamp these panels are currently **inert**, because the module has no replica
+factory (below). The table says what the module's code does, not what Basecamp does with it yet.
 
 | Panel | State | How |
 |-------|-------|-----|
@@ -65,6 +68,32 @@ path the buttons take.
 | Wallet → inspect | works | `inspectAccount` on the payee returns its owner program and status |
 | Wallet → decode | works | `decodeAccount` on the config PDA returns `type: MultisigConfig` with the fields above — this is what the IDL's account layouts bought |
 | Create Multisig · Create Proposal · Approve · Execute | wired | These submit transactions, so they are not fired at the public chain by a check. What is asserted is that the slot reaches the FFI and reports: `execute` with a seed that cannot be hex returns an error rather than doing nothing. The lifecycle evidence comes from the CLI |
+
+## The piece still missing: a replica factory
+
+A `ui_qml` module is loaded in two processes, and the QML side does not build the connection itself.
+Basecamp's bridge loads a **second** plugin, beside the first and named for the module, and asks it
+for the replica:
+
+```
+LogosQmlBridge: no replica factory plugin registered for "private_multisig"
+qml: private_multisig: no backend — … logos.module("private_multisig") resolved. Every panel is inert.
+```
+
+Basecamp's own `package_manager_ui` ships exactly this, as `package_manager_ui_replica_factory.dylib`.
+The interface is undocumented and no headers ship with the application; its IID is
+`logos.view.replica_factory/1.0`, and its shape can be read out of that reference plugin's vtable —
+the secondary sub-vtable begins directly with `acquire(QRemoteObjectNode*)`, so there is no virtual
+destructor, and `replicaMetaObject()` follows it.
+
+**A first attempt at that plugin made Basecamp crash on startup and was withdrawn.** The crash is in
+Basecamp's own QML url interceptor, compiling a regex through PCRE2's JIT — no frame of ours appears
+in it — but it happened only in sessions where our factory was mapped, three times, and never before
+the factory existed. Three explanations were tested and all three were disproved: a build-machine
+`LC_RPATH` (dyld reuses the host's already-loaded Qt, so no second copy is created), a duplicate
+QtCore (measured: one before, one after), and an ad-hoc code signature (a hardened, JIT-entitled test
+host loads the same dylib and still JIT-compiles regexes happily). The cause is not yet known, and
+the plugin stays out of the package until it is.
 
 ## Why the panels rendered and did nothing
 
@@ -179,9 +208,10 @@ then cannot call the program.
 
 ## What is and is not claimed
 
-The package is built, verified structurally, installs, and its panels are wired to the chain: the
-contract check fetches the deployed config through the plugin's own slots and decodes it to the
-2-of-3 in [DEPLOYMENT.md](DEPLOYMENT.md), which is the whole path a press of ↻ takes.
+The package is built, verified structurally, installs in Basecamp 0.2.3 and opens from
+Applications → Blockchain, and every panel renders. The code behind those panels is proven against
+the live chain — the contract check fetches the deployed config through the plugin's own slots and
+decodes it to the 2-of-3 in [DEPLOYMENT.md](DEPLOYMENT.md):
 
 ```
   ok     fetchConfig filled the config property
@@ -189,7 +219,7 @@ contract check fetches the deployed config through the plugin's own slots and de
   ok     the fetched multisig is the deployed 2-of-3
 ```
 
-It carries only the `darwin-arm64` variant — the platform it was built on — and the click-through in
-Basecamp itself is shown in the demo video rather than asserted by a script, since no automation
-hook is exposed for it. Both are recorded in [limitations.md](limitations.md) and against P-U2 in
+**But that is a harness, not Basecamp.** Inside Basecamp the panels are inert until the module ships
+a replica factory, and it does not yet. It also carries only the `darwin-arm64` variant — the
+platform it was built on. Both are recorded in [limitations.md](limitations.md) and against P-U2 in
 [criteria-checklist.md](criteria-checklist.md).

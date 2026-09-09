@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 
 # Concurrent is deliberately absent: Basecamp does not ship QtConcurrent, and a plugin linking a
 # framework the host lacks cannot be loaded — the module installs and never appears.
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickWidgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickWidgets RemoteObjects)
 
 # ── FFI shared library (built by build-basecamp.sh / check-basecamp-contract.sh) ──────────────
 # The extension is not hardcoded: the same tree is configured on Linux by CI, where naming a .dylib
@@ -42,6 +42,17 @@ target_link_libraries(PrivateMultisigPlugin PRIVATE
 # Output name must match manifest.json "main" value (lib<name>_plugin.so)
 set_target_properties(PrivateMultisigPlugin PROPERTIES OUTPUT_NAME "private_multisig_plugin")
 
+# ── Replica factory (loaded by Basecamp's QML bridge, in the *main* process) ──────────────────
+#
+# Without this, `logos.module("private_multisig")` returns null and every panel is inert while the
+# window renders perfectly. The host finds it by name, beside the plugin. See src/ReplicaFactory.cpp.
+add_library(PrivateMultisigReplicaFactory SHARED src/ReplicaFactory.cpp)
+target_link_libraries(PrivateMultisigReplicaFactory PRIVATE Qt6::Core Qt6::RemoteObjects)
+set_target_properties(PrivateMultisigReplicaFactory PROPERTIES
+    OUTPUT_NAME "private_multisig_replica_factory"
+    PREFIX ""
+)
+
 # ── Standalone preview app ─────────────────────────────────────────────────
 add_executable(PrivateMultisigApp
     src/main.cpp
@@ -74,3 +85,11 @@ add_executable(PrivateMultisigContractTest tests/module_contract_test.cpp)
 target_link_libraries(PrivateMultisigContractTest PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick
 )
+
+# ── Replica factory load test ──────────────────────────────────────────────
+#
+# The first factory crashed Basecamp because it carried an rpath to this machine's Qt, pulling a
+# second QtCore into a process that already had one. This loads it the way the host does and checks
+# that it does not.
+add_executable(PrivateMultisigFactoryTest tests/factory_load_test.cpp)
+target_link_libraries(PrivateMultisigFactoryTest PRIVATE Qt6::Core Qt6::RemoteObjects)

@@ -32,10 +32,12 @@ Repository: <https://github.com/pramadanif/lp0002>
 > both approvals proved with `RISC0_DEV_MODE=0` at 75 minutes each on a 4-core runner, then execute at
 > the full 2-of-3.
 >
-> The Basecamp module installs in Logos Basecamp 0.2.3, opens from **Applications → Blockchain**,
-> and reads that deployment: `./scripts/check-basecamp-contract.sh` fetches the config through the
-> plugin's own slots — the path a press of ↻ takes — and decodes the same 2-of-3 (**P-U2**). It
-> carries only the `darwin-arm64` variant.
+> The Basecamp module installs in Logos Basecamp 0.2.3, opens from **Applications → Blockchain**, and
+> every panel renders. The code behind them is proven against that deployment —
+> `./scripts/check-basecamp-contract.sh` fetches the config through the plugin's own slots and
+> decodes the same 2-of-3 — but **in a harness, not in Basecamp**: the host hands a module's C++ to
+> its QML through a replica factory plugin we do not ship yet, so inside Basecamp the panels are
+> inert (**P-U2**, partial). It also carries only the `darwin-arm64` variant.
 >
 > **Not yet done**, and not claimed: the narrated video (**P-S6**). Five of the eleven evidence URLs
 > are on chain but not yet indexed by the public explorer; `./scripts/check-explorer-links.sh`
