@@ -42,7 +42,7 @@ description and not the repository.
 | Basecamp module *works* | **PASS** | `check-basecamp-contract.sh`: the plugin publishes the API Basecamp replicates, `Main.qml` resolves it via `logos.module()`, and with `PMSIG_CONTRACT_LIVE=1` it fetched the deployed 2-of-3 and listed 5 wallet accounts through the plugin's own slots |
 | Basecamp variants | **PARTIAL** | `darwin-arm64` only — stated scope, not a defect |
 | Testnet evidence | **PASS** | redeployed 2026-09-08T15:25Z; `verify-onchain.sh` exit 0 on 2026-09-09 |
-| `check-explorer-links.sh` | **PENDING (external)** | exit 75 — 6 of 11 resolve; the 5 lifecycle transactions are on chain but the explorer has not indexed them |
+| `check-explorer-links.sh` | **PENDING (external)** | exit 75 — 22 of 27 evidence URLs resolve. Of the seven lifecycle transactions the explorer has now indexed two; the other five it has not. It is working through them, not dropping them |
 | CI fast jobs | **PASS** | all green on the pin |
 | CI e2e standalone | **PASS** | run 34275830322 on pin `c530fc8`, 2 h 54 m: real sequencer, both approvals proved at 75 min each with `RISC0_DEV_MODE=0`, execute at full M, verified from chain data. A local run of the same script passed too ([evidence](../evidence/e2e-local-2026-09-09.md)) |
 | Docs vs reality | **PASS** | README, criteria-checklist, SOLUTION_DRAFT, basecamp-load, evidence and phase-E/F all re-run today |

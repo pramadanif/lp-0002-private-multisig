@@ -11,7 +11,7 @@ was done. Measured 2026-09-09.
 | Pin at time of writing | `d8a801bd125112dee452ad2b9cf4210088be8626` (moves until the freeze) |
 | `.lgx` | 2,652,219 bytes, sha256 `c2c4310565c059fbcffee19613ade77d9080dbd83f5b906a35a66f3109140f06` |
 | `verify-onchain.sh` | **exit 0** — 2-of-3, full M, INV-7 satisfied, `VERIFIED from public chain data alone` |
-| `check-explorer-links.sh` | **exit 75** — 6 of 11 resolve; the five lifecycle transactions are on chain but not yet indexed |
+| `check-explorer-links.sh` | **exit 75** — 22 of 27 evidence URLs resolve; five lifecycle transactions are on chain and not yet indexed (two of the seven have since appeared, so the indexer is progressing) |
 | `preflight-submission.sh` | `pass=18 fail=0 pending=2` (PF-09 explorer index, PF-12 video) |
 | CI e2e green | run [34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322) on pin `c530fc8`, 2 h 54 m, two 75-minute proofs at `RISC0_DEV_MODE=0` |
 | Upstream race | **PR #143 is OPEN** — "LP-0002 — Private M-of-N Multisig (resubmission of #133)", opened 2026-09-08 20:53 UTC |
