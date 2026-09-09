@@ -31,16 +31,16 @@ die() { printf '\n%s\n' "$*" >&2; exit 1; }
 This script plants violations in tracked files and restores them with 'git checkout --',
 which would discard that work. Commit or stash first."
 
-TOUCHED=(demo.sh scripts/deploy-testnet.sh docs/limitations.md)
+# The package is tracked, so git restores it like everything else. The first version of this kept a
+# copy in a temp file and deleted that copy inside restore() — which runs after every probe, so the
+# copy was gone before the probe that needed it. The drill finished "all caught" and left a .lgx
+# with the old repository URL planted in it sitting in the working tree. PF-18 would have caught it
+# at the next commit, which is the system working, but a drill that leaves live damage behind is not
+# one anybody will keep running.
 PKG=app/private_multisig.lgx
-PKG_BACKUP=$(mktemp)
-[[ -f $PKG ]] && cp "$PKG" "$PKG_BACKUP"
+TOUCHED=(demo.sh scripts/deploy-testnet.sh docs/limitations.md "$PKG")
 
-restore() {
-  git checkout -- "${TOUCHED[@]}" 2>/dev/null
-  [[ -s $PKG_BACKUP ]] && cp "$PKG_BACKUP" "$PKG"
-  rm -f "$PKG_BACKUP"
-}
+restore() { git checkout -- "${TOUCHED[@]}" 2>/dev/null; return 0; }
 trap restore EXIT
 
 drills=0; missed=0
@@ -104,6 +104,14 @@ PY
   probe PF-18 "the old repository name inside the shipped .lgx"
 else
   echo "  skipped PF-18 package probe — $PKG is not built"
+fi
+
+# Belt and braces: prove the drill put everything back, so a later commit cannot pick up a planted
+# violation as if it were real work.
+if [[ -n "$(git status --porcelain -- "${TOUCHED[@]}" 2>/dev/null)" ]]; then
+  echo
+  echo "the drill did not restore: $(git status --porcelain -- "${TOUCHED[@]}" | tr '\n' ' ')"
+  exit 1
 fi
 
 echo
