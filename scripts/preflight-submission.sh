@@ -308,14 +308,14 @@ fi
 # PF-18 — no tracked file may carry the repository's old name.
 # GitHub redirects a renamed repo, so a stale URL never 404s: it resolves, looks fine, and reads
 # wrong to the one reviewer who notices. That is why this needs a gate rather than an audit —
-# docs/agent-rename-audit.md was the audit, and it reported Cargo.toml clean while Cargo.toml still
+# docs/_archive/agent-rename-audit.md was the audit, and it reported Cargo.toml clean while it still
 # carried the old name. The audit itself is the one file allowed to quote the old name, because
 # quoting it is what that document is for; everything else, including the shipped package, must be
 # free of it.
 # Assembled from two halves so this file does not itself contain the string it forbids: the
 # check failed on its own source the first time it ran.
 OLD_NAME="pramadanif/lp""0002"
-STALE=$(git grep -l -- "$OLD_NAME" -- . 2>/dev/null | grep -v '^docs/agent-rename-audit\.md$' || true)
+STALE=$(git grep -l -- "$OLD_NAME" -- . 2>/dev/null | grep -v '^docs/_archive/agent-rename-audit\.md$' || true)
 if [[ -n "$STALE" ]]; then
   bad "PF-18" "tracked file(s) still name the old repository: $(echo "$STALE" | tr '\n' ' ')"
 else

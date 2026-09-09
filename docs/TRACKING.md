@@ -14,10 +14,11 @@
   Outstanding: the public explorer has indexed the two program deployments but not yet the five
   lifecycle transactions (`check-explorer-links.sh` exits 75). **The Basecamp module** is
   built, packaged, installed in Basecamp 0.2.3 and wired to the chain (see `scripts/check-basecamp-contract.sh`); only the `darwin-arm64` variant ships. **The video** is not recorded.
-  Everything else is locked with command evidence — see [agent-lock-brief.md](agent-lock-brief.md).
+  Everything else is locked with command evidence — see
+  [criteria-checklist.md](criteria-checklist.md), which carries the evidence per criterion.
   (Historic: the `e2e-sequencer` job was wired and had not completed; it went green on
   2026-09-06, run 34052567273, and again on 2026-09-09 on the current pin — run 34275830322,
-  2 h 54 m, two proofs of 75 min each.) Each run has failed further along than the last: missing guest toolchain → missing `libpcsclite` → a SIGPIPE panic in our own script (`docs/tried-failed.md`). Every failure so far has been a real defect, and the job fails rather than faking a pass. The build itself is large: a full blockchain node plus a C++ groth16 stack, ~12 min before anything else starts. (#105 eligibility: operator decided 2026-09-04 to proceed through Phase I — `docs/phase-N1-status.md` §3.)
+  2 h 54 m, two proofs of 75 min each.) Each run has failed further along than the last: missing guest toolchain → missing `libpcsclite` → a SIGPIPE panic in our own script (`docs/tried-failed.md`). Every failure so far has been a real defect, and the job fails rather than faking a pass. The build itself is large: a full blockchain node plus a C++ groth16 stack, ~12 min before anything else starts. (#105 eligibility: operator decided 2026-09-04 to proceed through Phase I — `docs/_archive/phase-N1-status.md` §3.)
 
 - Remote: https://github.com/pramadanif/lp-0002-private-multisig (public)
 
@@ -67,16 +68,21 @@ do not exist (`8e2f0b1`, `4c1a8f2`) — history was rewritten by a `git filter-b
 leaked key, and the recorded hashes were never updated. A reviewer checking them would have found
 nothing. Corrected 2026-09-05; every hash below now resolves.
 
-| Phase | Status | Status doc | Commit |
-|-------|--------|-----------|--------|
-| −1 | ✅ complete | `docs/phase-N1-status.md` | `f6a1a15` |
-| 0  | ✅ complete | `docs/phase-0-status.md` | `5ef6b93` / `b14f49e` |
-| A  | ✅ complete | `docs/phase-A-status.md` | `ec9534a` |
-| B  | ✅ complete | `docs/phase-B-status.md` | `f8b6e5f` |
-| C  | ✅ complete | `docs/phase-C-status.md` | `aebb278` |
-| D  | ✅ complete | `docs/phase-D-status.md` | `10276c1` |
-| E  | ◐ in progress (5/8 green, 2 in progress) | `docs/phase-E-status.md` | `7026ecf` |
-| F  | ◐ in progress (2/7 SC) | `docs/phase-F-status.md` | `de77b2e` |
-| G  | not started | — | — |
-| H  | not started | — | — |
-| I  | not started | — | — |
+The per-phase status documents were build logs, not part of the submission packet, and three of
+them still read "in progress" for work that had finished. They are kept for history under
+`docs/_archive/` and are **not** a current status surface: the one place status lives is
+[criteria-checklist.md](criteria-checklist.md).
+
+| Phase | Status | Archived status doc | Commit |
+|-------|--------|--------------------|--------|
+| −1 | ✅ complete | `docs/_archive/phase-N1-status.md` | `f6a1a15` |
+| 0  | ✅ complete | `docs/_archive/phase-0-status.md` | `5ef6b93` / `b14f49e` |
+| A  | ✅ complete | `docs/_archive/phase-A-status.md` | `ec9534a` |
+| B  | ✅ complete | `docs/_archive/phase-B-status.md` | `f8b6e5f` |
+| C  | ✅ complete | `docs/_archive/phase-C-status.md` | `aebb278` |
+| D  | ✅ complete | `docs/_archive/phase-D-status.md` | `10276c1` |
+| E  | ✅ complete — closed 2026-09-09 when the unattended run completed twice in one day | `docs/_archive/phase-E-status.md` | `7026ecf` |
+| F  | ✅ complete — the Basecamp module installs, opens and reads the chain | `docs/_archive/phase-F-status.md` | `de77b2e` |
+| G  | ✅ complete — deployed to the public testnet, `verify-onchain.sh` exit 0 | `docs/DEPLOYMENT.md` | — |
+| H  | ◐ in progress — the packet is written; the narrated video is not recorded | `docs/SOLUTION_DRAFT.md` | — |
+| I  | not started — the operator opens the prize PR, never the agent | — | — |

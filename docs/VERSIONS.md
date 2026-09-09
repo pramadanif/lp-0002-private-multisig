@@ -86,7 +86,7 @@ v0.6.0 tag — and that is an unreleased dependency, to be disclosed in `docs/li
 | `docker` | 29.1.3 | available for standalone-sequencer e2e if needed |
 | `jq` | 1.7.1-apple | |
 | `rg` | 14.1.1 | |
-| `rzup` / `r0vm` / `cargo-risczero` | see `docs/phase-N1-status.md` (installed in Phase −1) | install cmd: `curl -L https://risczero.com/install \| bash` then `rzup install` (per LEZ v0.2.4 README lines 112–120) |
+| `rzup` / `r0vm` / `cargo-risczero` | see `docs/_archive/phase-N1-status.md` (installed in Phase −1) | install cmd: `curl -L https://risczero.com/install \| bash` then `rzup install` (per LEZ v0.2.4 README lines 112–120) |
 
 ## Local reference checkouts (gitignored, `.refs/`)
 

@@ -181,9 +181,24 @@ local demo tool, marked `[local]` on every command, not a wallet.
 
 ## 11. Build reproducibility
 
-`artifacts/IMAGE_IDS.md` currently records a **local** build and says so in the file. A deployed or
-quoted binary must come from `./scripts/build-guests.sh --docker`, which builds inside the pinned
-container LEZ itself uses. Until that has been run, the recorded ImageID is a development value.
+Both committed guests are reproducible builds, made by `./scripts/build-guests.sh --docker` inside
+the pinned container LEZ itself uses (`r0.1.91.1`), and `artifacts/IMAGE_IDS.md` records which.
+A local build is a development value and must never be deployed or quoted; `deploy-testnet.sh`
+refuses artifacts marked non-reproducible.
+
+**Demonstrated rather than asserted.** Rebuilding `membership` from the same sources on a different
+day in a fresh container returned a byte-identical ImageID —
+`960db4f24de1f1b0ebdc064a9be1246bde0e6a06f8be7f349fa562cc4207eade`, the same value first recorded at
+commit `566286f`. That matters more here than in most projects: on LEZ a `ProgramId` **is** the
+ImageID, and through `config_hash` ([ADR-002](adr/ADR-002-bind-verifier-to-config-hash.md)) it is
+also part of every multisig address, so a guest that did not rebuild identically would silently move
+every address this repository documents.
+
+The failure this guards against was real. Every demo run used to build straight into `artifacts/`
+and replace the committed binaries, so the repository's own record drifted to a local build while
+the deployment path stayed protected. `build-guests.sh` now writes to `$PMSIG_ARTIFACTS_DIR` and the
+demo points that at `.e2e/run/artifacts`; because the committed binaries are reproducible and
+current, `demo.sh` skips the guest build and runs the very binaries the submission ships.
 
 ## 12. The CLI does not yet reach a sequencer
 

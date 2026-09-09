@@ -106,7 +106,7 @@ every process on the machine through `ps`, and shells record it in history. Noth
 protocol leaks there — the key never reaches the chain, the store or a log — but for a tool whose
 subject is not revealing which member acted, it deserved an alternative rather than silence.
 `--member-file` reads it from a file; `--member` still works and warns. Recorded in
-[limitations.md §10b](limitations.md).
+[limitations.md §10b](../limitations.md).
 
 Also added, and passing: a test that reads the bytes the store actually writes to disk and asserts
 no member's `nsk` is among them. The first version of it was vacuous — `serde_json` renders

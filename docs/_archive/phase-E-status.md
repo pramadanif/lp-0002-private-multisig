@@ -123,7 +123,7 @@ unattended run. There are now two, on the same day:
 - CI, [run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322): 2 h 54 m,
   both approvals proved at `RISC0_DEV_MODE=0` in 75 minutes each on a 4-core runner, then execute at
   full M and `VERIFIED from public chain data alone`.
-- A laptop, [evidence/e2e-local-2026-09-09.md](../evidence/e2e-local-2026-09-09.md): 22 and 21
+- A laptop, [evidence/e2e-local-2026-09-09.md](../../evidence/e2e-local-2026-09-09.md): 22 and 21
   minutes per proof, same script, same verification.
 
 **SC-E.1 and SC-E.4 are met.**

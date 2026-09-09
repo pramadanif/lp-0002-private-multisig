@@ -44,7 +44,7 @@ description and not the repository.
 | Testnet evidence | **PASS** | redeployed 2026-09-08T15:25Z; `verify-onchain.sh` exit 0 on 2026-09-09 |
 | `check-explorer-links.sh` | **PENDING (external)** | exit 75 — 22 of 27 evidence URLs resolve. Of the seven lifecycle transactions the explorer has now indexed two; the other five it has not. It is working through them, not dropping them |
 | CI fast jobs | **PASS** | all green on the pin |
-| CI e2e standalone | **PASS (twice)** | run [34302452494](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34302452494) on pin `a8755b4`, all eleven jobs green, e2e 3 h 40 m, two 96-min proofs, `VERIFIED from public chain data alone`. Before it, run 34275830322 on pin `c530fc8`, 2 h 54 m: real sequencer, both approvals proved at 75 min each with `RISC0_DEV_MODE=0`, execute at full M, verified from chain data. A local run of the same script passed too ([evidence](../evidence/e2e-local-2026-09-09.md)) |
+| CI e2e standalone | **PASS (twice)** | run [34302452494](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34302452494) on pin `a8755b4`, all eleven jobs green, e2e 3 h 40 m, two 96-min proofs, `VERIFIED from public chain data alone`. Before it, run 34275830322 on pin `c530fc8`, 2 h 54 m: real sequencer, both approvals proved at 75 min each with `RISC0_DEV_MODE=0`, execute at full M, verified from chain data. A local run of the same script passed too ([evidence](../../evidence/e2e-local-2026-09-09.md)) |
 | Docs vs reality | **PASS** | README, criteria-checklist, SOLUTION_DRAFT, basecamp-load, evidence and phase-E/F all re-run today |
 | Video | **HUMAN** | not recorded; must show the Basecamp module fetching real state, and use a human voice |
 
@@ -57,14 +57,14 @@ Kept: everything that made the deployment possible. The reproducible binaries, t
 most of all — the knowledge of the ordering that took three failed runs to find: **a shielded
 account must be claimed with `auth-transfer init` while it is still wholly default; once
 `sync-private` gives it a nonce it can never be claimed or used as an approver again**
-([lez-admission-rules.md](lez-admission-rules.md)). On a chain at height 19 there is nothing to sync,
+([lez-admission-rules.md](../lez-admission-rules.md)). On a chain at height 19 there is nothing to sync,
 so the redeploy should be markedly faster than the first one.
 
 ## Plan, in order
 
 1. **Record the video.** Human-voiced, showing the Basecamp module fetch the deployed config and
    proposal, the CLI lifecycle with `RISC0_DEV_MODE=0` legible, and the pin commit. Shot list:
-   [video-transcript.md](video-transcript.md).
+   [video-transcript.md](../video-transcript.md).
 2. Confirm the e2e job is green on the final pin.
 3. Re-run `verify-onchain.sh` and `check-explorer-links.sh` **on the day the PR is opened** — the
    testnet wipes, and a dead link fails the plan gate.

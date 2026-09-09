@@ -344,7 +344,60 @@ explanations were formed and all three were **tested and disproved**:
 | Two Qt copies regardless of rpath | Same measurement with the rpath stripped | Identical |
 | Ad-hoc signature costs the process its JIT entitlement | Sign a test host `-o runtime` with `com.apple.security.cs.allow-jit`, load the dylib, force a PCRE2 JIT compile | Compiles and matches happily |
 
-So the cause is still unknown, and the factory stays out of the package until it is known. What is
-recorded here instead of a fix is the discipline that produced three dead ends cheaply: each theory
-was stated, given a measurement that could refute it, and dropped when it was refuted — rather than
-shipped as a plausible story.
+Two more theories followed, and both were disproved the same way: that any third-party dylib would
+crash it, and that the `callModule` route was at fault. Five stated theories, five refutations.
+
+**Both real causes were found, and neither was any of the five.**
+
+The first is the host's. Basecamp runs under a hardened runtime whose entitlements do not include
+`com.apple.security.cs.allow-jit`, so PCRE2's JIT traps the moment Qt decides a pattern has been
+used often enough to compile — reproduced and written up in [BUGS_FILED.md](BUGS_FILED.md) §8. The
+workaround is `launchctl setenv QT_ENABLE_REGEXP_JIT 0` before starting Basecamp, and it has to be
+`launchctl` rather than a shell `export`, because the app is launched from the Dock and never sees
+a terminal's environment. Checking that took its own mistake: an early check read the variable in
+the shell that set it, not in the process that mattered.
+
+The second was mine. The reconstructed factory interface had no virtual destructor, so every entry
+in the vtable was off by two slots and the host called `acquire` at the address of a destructor. The
+reason it took so long to see is worth recording: **my own load test kept a private copy of the
+interface declaration**, so the test and the plugin were wrong in exactly the same way and agreed
+with each other perfectly. Once both were made to include one shared header —
+`app/src/LogosViewReplicaFactory.h` — the test reproduced the crash immediately. A test that carries
+its own copy of the thing under test is not a test.
+
+The factory now ships: `variants/darwin-arm64/private_multisig_replica_factory.dylib` inside
+`app/private_multisig.lgx`, and the module opens and reads chain state in Basecamp.
+
+What is worth keeping from the five dead ends is the discipline, not the theories: each was stated,
+given a measurement that could refute it, and dropped when it was refuted — rather than shipped as a
+plausible story. What is worth keeping from the two real causes is that neither was reachable by
+reasoning. One needed the host's entitlements read, the other needed a test that did not share the
+defect it was looking for.
+
+## An approval that never confirmed on the public testnet
+
+2026-09-07. A full lifecycle run against the public testnet got as far as the first approval and
+stopped: the wallet gave up waiting after 30 blocks. That does not mean rejected — the proof was
+already at the sequencer and could land later — so the run was recorded before rerunning anything,
+because rerunning the script would have been wrong twice over: the deterministic parameters would
+collide with accounts just created, and a fresh namespace would abandon a treasury already funded
+with 100 while the payer had only 100 left.
+
+Four causes were ruled out without spending another twenty-minute proof:
+
+| Suspected | Ruled out by |
+|-----------|--------------|
+| Circuit version mismatch | Testnet fingerprint matched v0.2.4, checked the same day |
+| PDA collision | Both PDAs were empty before the run |
+| Transaction too large | The local sequencer uses the same 1 MiB `max_block_size` and accepted this shape without delay |
+| A malformed transaction | CI passed the full cycle with the same reproducible binaries against a standalone sequencer |
+
+What remained was contention for block space on a public testnet, where LEZ defers a transaction
+that does not fit to the next block, repeatedly — and the actual rejection reason, if there was one,
+only exists in a node log that is not ours.
+
+The deployments from that day survived and are still the two the submission cites
+(`fe3a65ee…`, `ef9029b2…`). The lifecycle was redone on 2026-09-08 after a testnet reset, and those
+later transactions are the ones in [DEPLOYMENT.md](DEPLOYMENT.md). The in-flight note itself is in
+`docs/_archive/` rather than `evidence/`, because its half-finished hashes would otherwise sit
+beside the real ones with nothing saying which is which.

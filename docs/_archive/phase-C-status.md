@@ -39,7 +39,7 @@ given id ran and accepted the witness — but nothing said **which** program tha
 could stand up a permissive "membership" program, create a multisig naming it, and approve at will:
 honest member set, real threshold, hostile verifier.
 
-Per ADR-001's own rule, [ADR-002](adr/ADR-002-bind-verifier-to-config-hash.md) was written *before*
+Per ADR-001's own rule, [ADR-002](../adr/ADR-002-bind-verifier-to-config-hash.md) was written *before*
 the code change. The formula gained a field:
 
 ```
@@ -70,7 +70,7 @@ unrepresentable, not rejected at runtime — and its only test asserted the cons
 Documenting an error the program claims to raise and never does is an overclaim, so the code is gone
 and `there_is_no_public_approve_path` now asserts the real behaviour: a verifier id naming no bound
 program is refused with **1013 `WrongMembershipProgram`** (`7013` on chain). See
-[`error-codes.md` §1.3](error-codes.md).
+[`error-codes.md` §1.3](../error-codes.md).
 
 ## Shape of the implementation
 
@@ -115,7 +115,7 @@ the *proposal* and everything else in the transaction is chosen by whoever submi
 could have redirected an approved payment to themselves with every approval still verifying. Found
 by the executor tests above, on the first day they existed. The funds now leave the multisig's own
 config PDA and the recipient must be the one the proposal named; see
-[ADR-001 INV-7](adr/ADR-001-architecture.md) and `execute_refuses_a_recipient_the_proposal_did_not_name`.
+[ADR-001 INV-7](../adr/ADR-001-architecture.md) and `execute_refuses_a_recipient_the_proposal_did_not_name`.
 
 Neither script would have caught the second one: both proposed a transfer to one address and then
 executed with `--treasury $CREATOR --recipient $CREATOR`, moving money from an account to itself.

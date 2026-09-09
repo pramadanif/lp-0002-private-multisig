@@ -60,14 +60,31 @@ Status: ✅ evidence exists · ◐ partial · ⛔ not met
 
 ## Cross-check against actual rejections
 
-[`reviewer-gaps.md`](reviewer-gaps.md) reads all nine closed LP-0002 submissions and the three
-accepted ones. Three causes account for nearly every rejection: **CI not running a real LEZ sequencer
-(6×)**, **missing or dead testnet evidence (5×)**, and **missing CU cost (5×)**. Our two ⛔ rows on
-CI and testnet are exactly those, and are the right place to spend remaining effort.
+All nine closed LP-0002 submissions were read, in the reviewers' own words, along with the three
+that were accepted. Three causes account for nearly every rejection:
 
-Causes that killed others and are already closed here: derivation-only binding (#91), dev-mode
-clobber in a child script (#97), and no partial-approval resume (#91) — all three mutation-tested
-rather than merely implemented.
+| Cause | Times cited | Ours |
+|-------|-------------|------|
+| CI not running a real LEZ sequencer e2e, or not green | **6×** — #68, #91, #92, #97, #115, #120 | ✅ P-S2, green twice |
+| Testnet evidence missing, or explorer links dead | **5×** — #68, #92, #97, #120, #131 | ✅ P-F6/P-F7 deployed and re-verified; the explorer index still lags |
+| CU cost missing or "unavailable" | **5×** — #68, #91, #115, #120, #131 | ✅ P-P1, all four instructions measured |
+
+The long tail, each cited once or twice, is also closed: `demo.sh` not genuinely
+`RISC0_DEV_MODE=0` (#68, #97 — now set at the entrypoint and mutation-tested), derivation-only
+binding (#91 — in-circuit now, and dropping the assertion fails three tests), no partial-approval
+resume (#91), Basecamp assets not separately downloadable (#91), and `execute` carrying no proof
+(#131 — answered directly in [SOLUTION_DRAFT.md](SOLUTION_DRAFT.md), because ours is also public and
+the reason it is not the same failure has to be stated rather than hoped past).
+
+**The one remaining ⛔ is P-S6, the narrated video** — a cause that closed two submissions outright
+(#87, #102).
+
+**What the accepted ones teach is narrower than it looks.** #80 and #100 were awarded with no
+criticism at all. #64 was awarded after exactly two mechanical fixes: *"can you please re-submit
+transactions as they are not available anymore"* — its explorer links had expired between submission
+and review — and *"make sure CI passes"*. Neither is about cryptography. So the evidence must be
+live **at the moment a human looks**, which is why `check-explorer-links.sh` treats a page that
+loads but reports no such transaction as dead, and why it is re-run on the day the PR is opened.
 
 ## Summary
 

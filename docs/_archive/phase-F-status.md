@@ -64,7 +64,7 @@ each makes it pass. A gate that has never failed is not a gate.
 **And the same secret did reach a file, by another road.** On 2026-09-09 the witness was found
 sitting in plaintext in the approve scripts' own run logs — the SPEL CLI echoes the arguments it is
 given. This section was written about a leak that nearly happened in the UI while an identical one
-was happening in the tooling. See [tried-failed.md](tried-failed.md) and preflight **PF-16**.
+was happening in the tooling. See [tried-failed.md](../tried-failed.md) and preflight **PF-16**.
 
 **Corrected 2026-09-05.** The check began with `if [[ ! -d app ]]; then … exit 0; fi`, which was
 reasonable while Phase F had not run. `app/` is committed now, so its absence means a broken

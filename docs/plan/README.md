@@ -9,7 +9,9 @@ plan's clause numbers can be cited without a network round trip.
 | [`LP-0002.md`](LP-0002.md) | `prizes/LP-0002.md` — the prize's own text and success criteria |
 | [`planlp0002.md`](planlp0002.md) | the build plan (v5.1) this repository follows |
 | [`planlpoo0023.md`](planlpoo0023.md) | the companion plan |
-| [`PROMPT_CLAUDE_CODE_LP0002.md`](PROMPT_CLAUDE_CODE_LP0002.md) | the build prompt |
+
+The build prompt that drove this repository was here too. It is agent input rather than prize
+text, so it now sits in `docs/_archive/PROMPT_CLAUDE_CODE_LP0002.md`.
 
 **Their relative links do not resolve here, and that is expected.** They point at paths in the
 upstream repository — `../TERMS.md`, `../README.md#evaluation-policies`, `prizes/LP-0002.md` — which

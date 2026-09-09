@@ -73,7 +73,7 @@ Each was a real contradiction between two files a judge reads, quoted from both 
 
 | Item | Owner | Note |
 |------|-------|------|
-| Narrated video | **human** | Script ready in [video-transcript.md](video-transcript.md); URL then replaces both `TBD` slots and checks P-S6 |
+| Narrated video | **human** | Script ready in [video-transcript.md](../video-transcript.md); URL then replaces both `TBD` slots and checks P-S6 |
 | Explorer index | **external** | Five transactions on chain, not yet rendered. Re-run `check-explorer-links.sh` on PR day |
 | CI e2e on the final pin | automatic | Nothing on the path e2e exercises has changed since the green run; one run after the freeze settles it |
 | Opening the PR | **operator** | Never the agent |

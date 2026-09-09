@@ -73,7 +73,7 @@ The new hash and size were synced into `docs/basecamp-load.md`, `docs/SOLUTION_D
 `docs/criteria-checklist.md` (P-U2), `docs/phase-F-status.md` and `docs/agent-lock-brief.md`. The
 README does not hardcode the hash; it links to `basecamp-load.md`.
 
-> **Superseded later the same day.** The module icon was redrawn ([make-icon.py](../scripts/make-icon.py))
+> **Superseded later the same day.** The module icon was redrawn ([make-icon.py](../../scripts/make-icon.py))
 > and the package rebuilt, so the current artefact is sha256
 > `1d8b806dfabdc369d8c1546e42ff933a96194eb74f7d78fdb58260768597204d`, 2,653,306 bytes — the values
 > in the table above are the rename rebuild's, kept as the record of that measurement. The embedded
@@ -108,7 +108,7 @@ place. Before filming:
 2. Install Local Package → `app/private_multisig.lgx`
 3. Confirm the row still reads Type `ui_qml`
 4. Basecamp still needs `launchctl setenv QT_ENABLE_REGEXP_JIT 0` and a restart
-   ([BUGS_FILED.md](BUGS_FILED.md) §8)
+   ([BUGS_FILED.md](../BUGS_FILED.md) §8)
 
 ## Remaining
 

@@ -1,11 +1,11 @@
 # Prize checklist — LP-0002 Private M-of-N Multisig
 
-Mirror of the official Success Criteria in [`prizes/LP-0002.md`](docs/plan/LP-0002.md), with the plan's
+Mirror of the official Success Criteria in [`prizes/LP-0002.md`](../plan/LP-0002.md), with the plan's
 `P-*` ids attached so every criterion has one name across this repo.
 
 ## Status lives in one place, and it is not this file
 
-**→ [`docs/criteria-checklist.md`](docs/criteria-checklist.md)** carries the status and evidence for
+**→ [`docs/criteria-checklist.md`](../criteria-checklist.md)** carries the status and evidence for
 every criterion below, including what is **not** met.
 
 This file used to carry a status column too, and it went stale: it showed all 21 criteria as "not

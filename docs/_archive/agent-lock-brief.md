@@ -28,7 +28,7 @@ unconfirmed. Nothing here is "almost": four gates are open.
 
 | Gate | State | Proof |
 |------|-------|-------|
-| **L1** Basecamp package | **LOCKED** | `.lgx` 2653306 bytes, sha256 `1d8b806dfabdc369d8c1546e42ff933a96194eb74f7d78fdb58260768597204d`. Installs in Basecamp 0.2.3, opens from Applications → Blockchain, and its panels read the deployed multisig — Config shows the 2-of-3 and the membership ImageID, Proposal two nullifiers and `executed`, Accounts the wallet. Needed a replica factory plugin (`logos.view.replica_factory/1.0`) whose interface was reconstructed from the host binary; `check-basecamp-contract.sh` asserts the contract and the factory test publishes the plugin and acquires a replica through the shipped factory. Caveats, both stated: `darwin-arm64` only, and Basecamp must start with `QT_ENABLE_REGEXP_JIT=0` — [BUGS_FILED.md](BUGS_FILED.md) §8, the host's bug |
+| **L1** Basecamp package | **LOCKED** | `.lgx` 2653306 bytes, sha256 `1d8b806dfabdc369d8c1546e42ff933a96194eb74f7d78fdb58260768597204d`. Installs in Basecamp 0.2.3, opens from Applications → Blockchain, and its panels read the deployed multisig — Config shows the 2-of-3 and the membership ImageID, Proposal two nullifiers and `executed`, Accounts the wallet. Needed a replica factory plugin (`logos.view.replica_factory/1.0`) whose interface was reconstructed from the host binary; `check-basecamp-contract.sh` asserts the contract and the factory test publishes the plugin and acquires a replica through the shipped factory. Caveats, both stated: `darwin-arm64` only, and Basecamp must start with `QT_ENABLE_REGEXP_JIT=0` — [BUGS_FILED.md](../BUGS_FILED.md) §8, the host's bug |
 | **L2** Explorer live | **NOT LOCKED** | Redeployed 2026-09-08. `check-explorer-links.sh` → exit 75: all seven transactions are on the chain and the sequencer returns each one; the explorer has indexed two of them so far and not the other five. That it has started is the point — the wait is the indexer's, not a dead deployment. Re-run before the PR |
 | **L3** verify-onchain | **LOCKED** | exit 0 against the live deployment: FULL M, INV-7 (payee holds 60 of 60 approved), treasury 40 exactly, 2 privacy-preserving transactions |
 | **L4** Full-M testnet lifecycle | **LOCKED** | create_multisig `007d9ff2…` · propose `aa14aa28…` · approve `a3eaeb3a…` · approve `2a283d3c…` · execute `d1a47fdd…`; treasury 100 → 40, payee 0 → 60. DEPLOYMENT.md carries all seven with full hashes and links |
@@ -48,7 +48,7 @@ Lost: the transactions, the funded payer, and the approver accounts claimed on t
 Kept: the recipe. Reproducible binaries, working scripts, and the ordering that took three failed
 runs to find — **a shielded account must be claimed with `auth-transfer init` while it is still
 wholly default; once `sync-private` gives it a nonce it can never be claimed or used as an approver
-again** ([lez-admission-rules.md](lez-admission-rules.md)). At height 19 there is nothing to sync, so
+again** ([lez-admission-rules.md](../lez-admission-rules.md)). At height 19 there is nothing to sync, so
 the redeploy should be far quicker than the first.
 
 This also settles a question of sequencing: **the deployment has to be done close to the day the PR
