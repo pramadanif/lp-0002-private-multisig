@@ -114,11 +114,19 @@ The privacy-preserving approval works end to end on a live sequencer:
 
 That last line is P-F1 and P-F2 observable on chain rather than only in a unit test.
 
-## What is still missing for Phase E
+## Phase E is complete
 
-`scripts/e2e-local-sequencer.sh` now drives the whole sequence — create, propose, approve at full M,
-execute — and `demo.sh` `exec`s it. What is missing is a **completed** unattended run: **SC-E.1 and
-SC-E.4 remain unmet** until one finishes, in CI or on a clean machine.
+`scripts/e2e-local-sequencer.sh` drives the whole sequence — create, propose, approve at full M,
+execute — and `demo.sh` `exec`s it. What was missing here for a long time was a **completed**
+unattended run. There are now two, on the same day:
+
+- CI, [run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322): 2 h 54 m,
+  both approvals proved at `RISC0_DEV_MODE=0` in 75 minutes each on a 4-core runner, then execute at
+  full M and `VERIFIED from public chain data alone`.
+- A laptop, [evidence/e2e-local-2026-09-09.md](../evidence/e2e-local-2026-09-09.md): 22 and 21
+  minutes per proof, same script, same verification.
+
+**SC-E.1 and SC-E.4 are met.**
 
 Two things were added to the approve step after watching a CI job sit "in progress" for an hour with
 no way to tell proving from hung: it now prints elapsed minutes and the summed `r0vm` RSS every

@@ -237,8 +237,14 @@ vid_src=""
 # guarding the video requirement was satisfied by the statement that the video did not exist.
 vid_line=""
 if [[ -n "$vid_src" ]]; then
+  # And the URL must not point back into this repository. The packet links to the *shot list*,
+  # docs/video-transcript.md, on a line that says "video" and carries a URL and none of the words
+  # above — so this gate passed on a link to the plan for the recording. That is the same failure as
+  # the one described above, one layer out: a check for the video satisfied by a document about the
+  # video. A link to our own repo is never the video.
   vid_line=$(grep -iE 'video' "$vid_src" | grep -E 'https?://' \
-             | grep -viE '\bno\b|not |unmet|missing|todo|placeholder|tbd|pending' | head -1)
+             | grep -viE '\bno\b|not |unmet|missing|todo|placeholder|tbd|pending' \
+             | grep -viE 'github\.com/pramadanif|video-transcript' | head -1)
 fi
 if [[ -n "$vid_line" ]] && [[ -s docs/video-transcript.md ]]; then
   ok "PF-12" "narrated video URL present in SOLUTION_DRAFT and docs/video-transcript.md exists"

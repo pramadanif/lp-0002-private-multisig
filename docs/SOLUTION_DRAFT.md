@@ -1,20 +1,22 @@
 # Solution: LP-0002 — Private M-of-N Multisig for LEZ
 
-**Status: the full lifecycle runs on the LEZ public testnet, and the Basecamp module reads it.**
-What is outstanding is listed below rather than glossed — read "What is not done" before taking
-anything here as a claim.
-
 **Submitted by:** pramadanif
-**Repository:** https://github.com/pramadanif/lp0002
-**Commit:** _pinned at submission time; not yet fixed_
 
----
+> This file is the draft of `solutions/LP-0002.md`. It is written in the prize repository's shape and
+> uses absolute links, so it can be copied there unchanged. Two `TBD` slots wait on the narrated
+> video; nothing else is a placeholder.
 
 ## Summary
 
 A private M-of-N multisig for the Logos Execution Zone. Members hold shielded LEZ accounts and
-approve proposals **anonymously**: the chain records that a threshold was reached and never which
+approve proposals **anonymously**: the chain records that a threshold was reached, and never which
 members reached it.
+
+The full lifecycle runs on the LEZ public testnet — a 2-of-3 multisig created, funded, proposed
+against, approved twice by shielded members with `RISC0_DEV_MODE=0`, and executed, moving 60 of a
+100 treasury. `./scripts/verify-onchain.sh` re-checks all of it from public data alone and exits 0.
+CI runs the same lifecycle against a real standalone sequencer on every push. A Basecamp `ui_qml`
+module installs, opens, and reads that deployment on screen.
 
 The precise on-chain claim, stated so a reviewer can check it rather than take it on trust:
 
@@ -32,164 +34,332 @@ The precise on-chain claim, stated so a reviewer can check it rather than take i
   PDA seed. Lowering M, substituting the member set, or naming a permissive verifier does not weaken
   the multisig — it names one that does not exist.
 
-## Why `execute` carries no proof
+**Outstanding, and not glossed:** the narrated video is not recorded, and the public explorer has
+indexed the two program deployments but not yet the five lifecycle transactions. See
+[What is not done](#what-is-not-done).
 
-Answering this up front, because a previous submission to this prize was closed partly for *"the
-execute transaction contains no proof"*.
+## Demo Video
 
-The proof is at **approve** time. Each approval is a privacy-preserving transaction whose validity
-depends on LEZ's circuit verifying the multisig program **and** the chained membership program. By
-the time `execute` runs, the threshold is already a fact on chain: a set of distinct, proof-backed
-nullifiers.
+**Not recorded yet — TBD.**
 
-`execute` reads that verified state and moves funds if `count >= M`. It takes no secret input and
-asserts nothing that was not already proven, so there is nothing left for a proof to establish.
+The shot list and the required narration are in
+[`docs/video-transcript.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/video-transcript.md):
+human voice throughout, the CLI lifecycle with `RISC0_DEV_MODE=0` legible, and the Basecamp module on
+camera reading chain state. The URL will be placed here and in the Repository list below.
 
-**Keeping it public is deliberate, and better for privacy.** Anyone may execute a proposal that has
-reached its threshold — including a non-member. If execution required a member, the executor *would
-be* a member, and that would link a member to the proposal. A permissionless execute is what makes
-criterion **P-F4** — execution unlinkable to any individual member — achievable at all.
+## Repository
 
-**Which raises the obvious question: if anyone may execute, what stops them redirecting the money?**
-The approvals cover the *proposal*; every other part of the transaction is chosen by whoever submits
-it. So `execute` pins both ends of the transfer — the funds leave the multisig's own config PDA, and
-the recipient account must be the one the proposal named, or the call is refused (**INV-7**, error
-`7012` on chain).
+- **Repo:** <https://github.com/pramadanif/lp-0002-private-multisig>
+- **Commit / pin:** `5f28b47c31e4905efc257b7978d24c63633648f9` measured 2026-09-09. The pin may move
+  until the submission is frozen; the commit named in the PR is the one that counts.
+- **Licence:** MIT OR Apache-2.0
+- **Narrated demo video:** **TBD** — human recording pending
+  ([shot list](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/video-transcript.md))
+- **Per-criterion map:**
+  [`docs/criteria-checklist.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/criteria-checklist.md)
+- **Deployment evidence:**
+  [`docs/DEPLOYMENT.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/DEPLOYMENT.md)
+- **Basecamp module:**
+  [`app/private_multisig.lgx`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/app/private_multisig.lgx)
+  — 2,664,654 bytes, sha256
+  `3fabf0391ef27d3bf66d6e8f010f1547205d8054e85fd90c2127459e97eefe0b`, variant `darwin-arm64`;
+  `lgx verify` reports the structure valid. Install steps:
+  [`docs/basecamp-load.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/basecamp-load.md)
+- **CU costs:** [`docs/cu-costs.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/cu-costs.md)
+- **Limitations:**
+  [`docs/limitations.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/limitations.md)
+- **CI e2e with `RISC0_DEV_MODE=0`:**
+  [run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322) — 2 h 54 m, green;
+  two proofs of 75 minutes each on a 4-core runner, then execute at full M
 
-This was a real hole, not a hypothetical one. `execute` destructured the approved action as
-`{ amount, .. }`, discarding the recipient, and took a caller-supplied treasury account that nothing
-tied to the multisig — so a submitter could have redirected an approved payment to themselves while
-every approval still verified. It was found by running the program through the risc0 executor rather
-than by reading it, and neither script would have caught it: both proposed a transfer to one address
-and then executed with `--treasury $CREATOR --recipient $CREATOR`, moving money from an account to
-itself. `execute_refuses_a_recipient_the_proposal_did_not_name` is the regression test; with the
-binding removed it fails, showing the multisig paying an account the proposal never named.
+```bash
+shasum -a 256 app/private_multisig.lgx     # must print the sha256 above
+lgx verify app/private_multisig.lgx        # "Package structure is valid"
+```
 
-## Architecture
+## Public-testnet deployment
+
+Network `https://testnet.lez.logos.co`, explorer `https://explorer.testnet.lez.logos.co`.
+Redeployed **2026-09-08** after a testnet reset wiped the previous deployment; re-verified
+2026-09-09. Recipe and per-step notes:
+[`docs/DEPLOYMENT.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/DEPLOYMENT.md).
+
+| # | Action | Transaction (full hash, click for explorer) |
+|---|--------|---------------------------------------------|
+| 1 | Deploy `membership` (block 62) | [`fe3a65ee4127a821847514d0350df479c86cb9b6d14c399c5608b36dde333fdc`](https://explorer.testnet.lez.logos.co/transaction/fe3a65ee4127a821847514d0350df479c86cb9b6d14c399c5608b36dde333fdc) |
+| 2 | Deploy `multisig` (block 63) | [`ef9029b2a9d4ef8c261e02af21b9a099ceba510a58a05407ff4a60714bb08d4e`](https://explorer.testnet.lez.logos.co/transaction/ef9029b2a9d4ef8c261e02af21b9a099ceba510a58a05407ff4a60714bb08d4e) |
+| 3 | `create_multisig` — 2-of-3 | [`007d9ff27063b39843af29443abbcd40923de9fc4a17d9963d0521b9217e8a13`](https://explorer.testnet.lez.logos.co/transaction/007d9ff27063b39843af29443abbcd40923de9fc4a17d9963d0521b9217e8a13) |
+| 4 | `create_proposal` — transfer 60 | [`aa14aa283a0cdb5de76fee512a24aff1da30e73a6ae88cc7079a621e2a3db1d3`](https://explorer.testnet.lez.logos.co/transaction/aa14aa283a0cdb5de76fee512a24aff1da30e73a6ae88cc7079a621e2a3db1d3) |
+| 5 | **`approve`** — privacy-preserving, anonymous | [`a3eaeb3a773f35a48935944ca1b15bed683265dbded90633c094e4ef56aa4f4b`](https://explorer.testnet.lez.logos.co/transaction/a3eaeb3a773f35a48935944ca1b15bed683265dbded90633c094e4ef56aa4f4b) |
+| 6 | **`approve`** — privacy-preserving, anonymous | [`2a283d3c8887ef552bf56f415bbd6b534a4424e0765b590f3b44f6f6215a0aaa`](https://explorer.testnet.lez.logos.co/transaction/2a283d3c8887ef552bf56f415bbd6b534a4424e0765b590f3b44f6f6215a0aaa) |
+| 7 | `execute` — threshold reached at full M | [`d1a47fddeddbfebd1a387f52ac91ecaed43f8c20275d6fb82bf3acd2f460057e`](https://explorer.testnet.lez.logos.co/transaction/d1a47fddeddbfebd1a387f52ac91ecaed43f8c20275d6fb82bf3acd2f460057e) |
+
+| Field | Value |
+|-------|-------|
+| `membership` ImageID (= ProgramId) | `960db4f24de1f1b0ebdc064a9be1246bde0e6a06f8be7f349fa562cc4207eade` |
+| `multisig` ImageID (= ProgramId) | `79cf1dbaffe6295ce97af319e139220380d3da8ed4a877a12fd35cedc4a60468` |
+| Config PDA (the multisig's treasury) | `4ZKN1S7R8F9V2fJEzDz65ogabhDi8sDS82W5i4mADZxt` |
+| Proposal PDA | `32Te128ntLW4wSbT6xDb7SYha7q2g8EjFDYTUoDKHEDF` |
+| Payee | `9NJmD3awoi9FT1yxZFMCvPxuHDcedZbK6LoZ9ZyhAC1J` |
+| `config_hash` | `99cff7fa1f0c4fa267f29d34baafd720906a0e4259e013bc2ca42ac53498fbe4` |
+| `proposal_seed` | `f47f48e87e171ea02816f28fe542e50677a36f23f948e7956db994a9aefba255` |
+| Threshold | **2-of-3 — full M**, not a lowered tier |
+| Balances | treasury 100 → 40, payee 0 → 60 |
+
+**Explorer index, honestly:** the two program deployments render; the five lifecycle transactions are
+on chain and answer over JSON-RPC, but the explorer has not indexed them yet.
+`./scripts/check-explorer-links.sh` reports exactly which and exits 75 rather than passing quietly.
+The evidence does not depend on the explorer — `verify-onchain.sh` reads the accounts directly:
+
+```
+$ ./scripts/verify-onchain.sh
+  config       : 2-of-3, owner ok, rehashes to its own address
+  verifier     : matches the deployed membership program (ADR-002)
+  proposal     : 2 approvals of 2 required, executed, all nullifiers distinct
+  FULL M       : evidence uses the full threshold, not a lowered tier
+  payment      : 9NJmD3aw… holds 60, covering the 60 approved (INV-7)
+  privacy      : proposal holds a count + nullifiers, no member identity (P-F2)
+  VERIFIED from public chain data alone.
+  2 privacy-preserving transaction(s) — approvals really did take the private path
+```
+
+## Approach
+
+### The anchor
 
 ```
 config_hash = SHA256( DS_CONFIG ‖ member_root[32] ‖ M[1] ‖ N[1] ‖ multisig_id[32] ‖ membership_program_id[32] )
 ```
 
-That single line is the anchor. The config account lives at
-`for_public_pda(program_id, PdaSeed(config_hash))`, so its address attests to its own configuration,
-and the program re-hashes the stored fields and rejects a mismatch.
+The config account lives at `for_public_pda(program_id, PdaSeed(config_hash))`, so its address
+attests to its own configuration, and the program re-hashes the stored fields and rejects a mismatch.
+Lowering M or naming a permissive verifier does not produce a weaker multisig — it produces a
+different address, where nothing exists and nobody has funded anything.
 
 **Nullifier:** `nf = SHA256(DS_NF ‖ nsk ‖ multisig_id ‖ proposal_id)` — deterministic per
-(member, multisig, proposal), preimage-hiding, and keyed to `nsk` rather than an account id so a
-member cannot vote twice from another of their 2^128 addresses.
+(member, multisig, proposal), preimage-hiding, and keyed to `nsk` rather than an account id, so a
+member cannot vote twice from another of their 2^128 addresses. Full reasoning in
+[ADR-001](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/adr/ADR-001-architecture.md) and
+[ADR-002](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/adr/ADR-002-bind-verifier-to-config-hash.md).
 
-Full reasoning: [ADR-001](adr/ADR-001-architecture.md) and
-[ADR-002](adr/ADR-002-bind-verifier-to-config-hash.md).
+### Why `execute` carries no proof
 
-## Evidence
+Answered up front, because a previous submission to this prize was closed partly for *"the execute
+transaction contains no proof"*.
 
-| Claim | Where |
-|-------|-------|
-| Full lifecycle on the public testnet, create → propose → approve ×2 → execute | [DEPLOYMENT.md](DEPLOYMENT.md) |
-| The money moved: treasury 100 → 40, payee 0 → 60 | [evidence/testnet-lifecycle-verified.md](../evidence/testnet-lifecycle-verified.md) |
-| Both approvals are `PrivacyPreserving` transactions, not public ones | `./scripts/verify-onchain.sh` — checks the variant byte of each published transaction |
-| The payee holding the funds is the one *the proposal named* (INV-7) | `verify_onchain` reads the recipient out of the proposal account, never from an argument |
-| Same lifecycle against a standalone sequencer, in CI, `RISC0_DEV_MODE=0` | [run 34275830322](https://github.com/pramadanif/lp0002/actions/runs/34275830322) — 2 h 54 m, green: two proofs of 75 min each on a 4-core runner, then execute at full M |
-| The same script, run on a laptop | [evidence/e2e-local-2026-09-09.md](../evidence/e2e-local-2026-09-09.md) — 22 and 21 min per proof |
-| Reproducible guest binaries | `./scripts/build-guests.sh --docker`; the membership ImageID reproduces byte-identically across days and rebuilds |
-| Byte-compatibility with LEZ's own vectors | `crates/membership-core/tests/lez_compat.rs` |
-| Derivation cross-checked against a real wallet account | `crates/sdk/examples/wallet_member.rs` |
-| CU per instruction, measured on the deployed binaries | [cu-costs.md](cu-costs.md) |
-| Criteria → evidence map | [criteria-checklist.md](criteria-checklist.md) |
+The proof is at **approve** time. Each approval is a privacy-preserving transaction whose validity
+depends on LEZ's circuit verifying the multisig program **and** the chained membership program. By
+the time `execute` runs, the threshold is already a fact on chain: a set of distinct, proof-backed
+nullifiers. `execute` reads that verified state and moves funds if `count >= M`. It takes no secret
+input and asserts nothing that was not already proven, so there is nothing left for a proof to
+establish.
+
+**Keeping it public is deliberate, and better for privacy.** Anyone may execute a proposal that has
+reached its threshold — including a non-member. If execution required a member, the executor *would
+be* a member, and that would link a member to the proposal. A permissionless execute is what makes
+criterion **P-F4** achievable at all.
+
+**Which raises the obvious question: if anyone may execute, what stops them redirecting the money?**
+The approvals cover the *proposal*; every other part of the transaction is chosen by whoever submits
+it. So `execute` pins both ends of the transfer — the funds leave the multisig's own config PDA, and
+the recipient must be the account the proposal named, or the call is refused (**INV-7**, error `7012`
+on chain).
+
+This was a real hole, not a hypothetical one. `execute` destructured the approved action as
+`{ amount, .. }`, discarding the recipient, and took a caller-supplied treasury account that nothing
+tied to the multisig — so a submitter could have redirected an approved payment to themselves while
+every approval still verified. It was found by running the program through the risc0 executor rather
+than by reading it, and neither demo script would have caught it: both proposed a transfer to one
+address and then executed with `--treasury $CREATOR --recipient $CREATOR`, moving money from an
+account to itself. `execute_refuses_a_recipient_the_proposal_did_not_name` is the regression test;
+with the binding removed it fails, showing the multisig paying an account the proposal never named.
+
+### The Basecamp module
+
+A `ui_qml` module that installs through Basecamp's own Install Local Package, opens from
+Applications → Blockchain, and reads the deployment above: the Config panel shows the 2-of-3 and the
+membership ImageID, the Proposal panel shows two nullifiers and `executed`, and the Accounts panel
+lists the wallet.
+
+Two facts about Basecamp had to be found by reading its binaries, and both are filed upstream in
+[`docs/BUGS_FILED.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/BUGS_FILED.md):
+
+1. A module's QML runs in Basecamp's main process while its plugin runs in a `ui-host` child, and the
+   QML reaches the plugin only through a **replica factory** plugin the module must ship
+   (`<name>_replica_factory.dylib`, IID `logos.view.replica_factory/1.0`). Nothing documents it, no
+   header ships, and the generator does not emit one. Without it every panel renders and does
+   nothing.
+2. Basecamp runs a hardened runtime whose only entitlement is `disable-library-validation`. Its QML
+   sandbox JIT-compiles a regex, and without `allow-jit` that traps — so it must be started with
+   `QT_ENABLE_REGEXP_JIT=0` until the entitlement is added.
+
+**The Approve panel deliberately cannot submit.** An approval's witness is the member's nullifier
+secret key, and the module's generated C ABI builds *public* transactions — publishing it would be
+the exact failure this prize is about. Approvals go through the SDK/CLI, and
+`scripts/check-basecamp-privacy.sh` fails the build if anything reconnects that path.
+
+### Why Logos
+
+[why-logos.md](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/why-logos.md). Briefly: this scheme
+needs shielded accounts whose repeated use is unlinkable, and execution that can depend on secrets the
+chain never sees. LEZ provides both in the base layer; on a chain where validators must see the
+inputs, it is not possible at all.
+
+## Success Criteria Checklist
+
+All 21 criteria from the prize. Statuses match
+[`docs/criteria-checklist.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/criteria-checklist.md),
+which carries the full evidence for each.
+
+**Functionality**
+
+- [x] **P-F1** Shielded member approves without revealing identity — two privacy-preserving approvals
+      on chain (txs 5 and 6 above); `crates/sdk/tests/peer_privacy.rs` shows `prepare_approval` has no
+      parameter for another member's identity
+- [x] **P-F2** On-chain verifier confirms M approvals without recording which — the proposal account
+      holds a count and nullifiers; `Proposal` has six fields and none can hold a roster
+- [x] **P-F3** A member cannot approve twice — nullifier keyed to `nsk`, not to an account id;
+      error **1002** (`7002` on chain), with a test for voting from a second own address
+- [x] **P-F4** Completed execution unlinkable to any individual member — `execute` is public and
+      submitted by the payer; nothing in it or in the account names an approver
+- [x] **P-F5** Proof generation runs client-side on a standard laptop — 115.97 s standalone,
+      ≈19 min 26 s composed at 8.74 GB peak; repeated 2026-09-09 at 22 and 21 min
+- [x] **P-F6** Reference integration on LEZ testnet with shielded members — the deployment above
+- [x] **P-F7** ≥1 multisig on testnet, create → propose → approve-to-threshold → execute,
+      reproducible — `./scripts/deploy-testnet.sh`, re-checked by `./scripts/verify-onchain.sh`
+- [x] **P-F8** Full documentation and a clean public repository — 128 tests, ADRs, security model,
+      error codes, limitations, `BUGS_FILED.md`, and a documentation index in the README
+
+**Usability**
+
+- [x] **P-U1** Module/SDK for building Logos modules — `pmsig-sdk`, `pmsig-core`, `pmsig-store`,
+      `pmsig-cli`; the integration guide's code is a compiled example
+- [x] **P-U2** Basecamp GUI: local build, downloadable assets, loadable — the `.lgx` above installs,
+      opens, and reads the deployed multisig. Scope: `darwin-arm64` only, and Basecamp must start
+      with `QT_ENABLE_REGEXP_JIT=0` (host bug, filed)
+- [x] **P-U3** IDL for the LEZ program, using SPEL — `artifacts/multisig-idl.json`, generated from
+      `#[lez_program]` at compile time; the SPEL CLI built working commands from it
+
+**Reliability**
+
+- [x] **P-R1** Proof failures handled gracefully with a clear error to the member
+- [x] **P-R2** Partial approvals (< M) preserved and resumable across client restarts
+- [x] **P-R3** Deterministic, documented error codes for invalid-proof and double-vote cases
+
+**Performance**
+
+- [x] **P-P1** CU cost of each on-chain operation documented, numerically —
+      [`docs/cu-costs.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/cu-costs.md) for all
+      four instructions
+
+**Supportability**
+
+- [x] **P-S1** Deployed and tested on LEZ testnet — see the deployment table
+- [x] **P-S2** E2E tests against a **standalone** LEZ sequencer in CI —
+      [run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322), 2 h 54 m,
+      two 75-minute proofs at `RISC0_DEV_MODE=0`
+- [x] **P-S3** CI green on the default branch
+- [x] **P-S4** README documents E2E usage: deploy steps, addresses, CLI **and** Basecamp
+- [x] **P-S5** Reproducible `./demo.sh` against a real local sequencer with `RISC0_DEV_MODE=0`
+- [ ] **P-S6** Narrated video showing proof generation and confirming `RISC0_DEV_MODE=0` —
+      **not recorded**; script ready, URL pending
+
+## FURPS Self-Assessment
+
+### Functionality
+
+Creates a multisig, proposes a treasury transfer, accepts anonymous approvals from shielded members,
+and executes once the threshold is met. The privacy property is the product: the chain records a
+count and nullifiers, never identities. What it does **not** do: the member set is fixed at creation,
+there is no rotation or revocation, and the only proposed action is a treasury transfer — the
+`ProposedAction` enum has one variant, deliberately, so the reference integration is small enough to
+verify.
+
+### Usability
+
+Three entry points, and they are honestly different. The CLI drives the full lifecycle. The SDK is
+what a member uses to produce an approval, because that needs the prover. The Basecamp module reads
+chain state and submits the public instructions, and its Approve page explains why it will not submit
+an approval instead of failing at it. A first install points at nothing: four Settings fields have to
+be filled, which the module says on the page rather than leaving a reader to guess.
+
+### Reliability
+
+Failure paths are tested rather than assumed: proof failure, double approval, an invalid witness, a
+recipient the proposal did not name, and a config account at a valid address holding different
+values. Error codes are deterministic and documented. The scripts fail rather than skip — a missing
+tool aborts the run instead of passing quietly, which is what makes a green meaningful. Partial
+approvals survive a client restart.
+
+### Performance
+
+Measured, not estimated: 602,662 cycles and 115.97 s for the standalone membership proof; a composed
+approval — the one a member actually pays — at ≈19 min 26 s and 8.74 GB peak on an 8-core laptop with
+no GPU, reproduced twice on a second day at 22 and 21 minutes, and 75 minutes each on a 4-core CI
+runner. On-chain CU is documented per instruction. The practical constraint is **free RAM**: about
+9 GB, and a machine with a browser open swaps and looks hung.
+
+### Supportability
+
+The repository is the support surface: ADRs for the two decisions that matter, a security model, an
+error-code table, `tried-failed.md` for what went wrong and how it was caught, and `BUGS_FILED.md`
+for the upstream papercuts. Every claim in this file has a script behind it that a reviewer can run —
+`verify-onchain.sh`, `check-explorer-links.sh`, `check-basecamp-contract.sh`,
+`preflight-submission.sh` — and each exits non-zero when it should.
+
+## Supporting Materials
+
+- [`docs/DEPLOYMENT.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/DEPLOYMENT.md) — every transaction, full hashes and links
+- [`docs/criteria-checklist.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/criteria-checklist.md) — per-criterion evidence
+- [`docs/cu-costs.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/cu-costs.md) — proving and on-chain CU
+- [`docs/limitations.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/limitations.md) — what this does not do
+- [`docs/basecamp-load.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/basecamp-load.md) — installing the module, and what it took
+- [`docs/video-transcript.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/video-transcript.md) — the recording plan
+- [ADR-001](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/adr/ADR-001-architecture.md) · [ADR-002](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/adr/ADR-002-bind-verifier-to-config-hash.md) — architecture and verifier binding
+- [`docs/security.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/security.md) — threat model and invariants
+- [`docs/tried-failed.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/tried-failed.md) — mistakes made, and how each was caught
+- [`docs/BUGS_FILED.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/BUGS_FILED.md) — upstream LEZ / SPEL / Basecamp findings
+- [`scripts/verify-onchain.sh`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/scripts/verify-onchain.sh) · [`demo.sh`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/demo.sh)
+- [CI e2e run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322)
 
 **The prize demo is `./demo.sh`.** It drives a real standalone LEZ sequencer with
-`RISC0_DEV_MODE=0`. `demo-fast.sh` is a development tour, generates no proof, and is **not** cited
-as evidence anywhere.
-
-## Downloads, and how to check them yourself
-
-| | |
-|-|-|
-| Basecamp module | [`app/private_multisig.lgx`](../app/private_multisig.lgx) |
-| Size | 2,632,590 bytes |
-| sha256 | `c8056283a7f9c7b5ccca32841ec195bd011e54c54cea217f217b80e7f436fd06` |
-| Variant | `darwin-arm64` (built on the machine that produced it — [limitations](limitations.md)) |
-| Install steps | [basecamp-load.md](basecamp-load.md) |
-
-```bash
-shasum -a 256 app/private_multisig.lgx     # must match the hash above
-lgx verify app/private_multisig.lgx        # "Package structure is valid"
-```
-
-Verify the deployment from public data, needing no secrets and no local state:
-
-```bash
-./scripts/verify-onchain.sh                # reads docs/DEPLOYMENT.md
-./scripts/check-explorer-links.sh          # every evidence URL must resolve
-```
-
-`verify-onchain.sh` checks the config account is owned by the program and rehashes to its own
-address, that it names the deployed verifier, that the threshold was met at **full M** with distinct
-nullifiers, that the proposal executed, that the payee named *by the proposal* holds the amount that
-was approved (INV-7), that the treasury holds exactly the remainder, and that the approvals were
-`PrivacyPreserving` transactions rather than public ones.
-
-## Measurements
-
-| | |
-|---|---|
-| Membership proof (standalone) | 115.97 s, 602,662 cycles |
-| Composed approval (what a member actually pays) | ≈19 min 26 s, peak 8.74 GB |
-| Free RAM required | ≈9 GB |
-| Host | 8-core laptop, 16 GB, no GPU prover |
+`RISC0_DEV_MODE=0`. `demo-fast.sh` is a development tour, generates no proof, and is **not** cited as
+evidence anywhere.
 
 ## What is not done
 
 Listed first-class, because the difference between built and demonstrated is what this prize's gates
-test:
+test.
 
-- **The Basecamp module loads, and its panels read the chain — but no UI has been driven on
-  camera yet.** `app/private_multisig.lgx` — 2,632,590 bytes, sha256 `c8056283…f436fd06` — installs
-  through Basecamp's own "Install Local Package", is listed as `ui_qml`, and opens from
-  Applications → Blockchain.
-
-  Four undocumented facts stood in the way, each of which fails silently:
-
-  1. `lgx` 0.1.0 writes a package format Basecamp 0.2.3 cannot read — the install logs
-     `installPlugin` and then nothing at all.
-  2. The plugin must be built against the Qt the host ships (6.9.2, not the newest installed): Qt's
-     version tag symbol makes a 6.11 build unloadable, and Basecamp does not log `dlopen` failures.
-  3. The linker's absolute paths to the build machine have to be rewritten.
-  4. A `ui_qml` module's QML runs in Basecamp's **main** process while its plugin runs in a
-     `ui-host` child. The generated scaffold set `backend` as a context property on the engine it
-     built itself — an engine Basecamp never renders — so every binding raised
-     `ReferenceError: backend is not defined` behind a window that drew perfectly, and no button did
-     anything.
-
-  The plugin now publishes its API the way Basecamp's own modules do, and the QML resolves it
-  through `logos.module()`. `./scripts/check-basecamp-contract.sh` asserts both halves of that
-  contract and, with `PMSIG_CONTRACT_LIVE=1`, fetches the deployed config through the plugin's own
-  slots — the path a press of ↻ takes — decoding the same 2-of-3 `verify-onchain.sh` reads. CI runs
-  it. What is not yet shown is the window open and doing that on camera. The package also carries
-  only the `darwin-arm64` variant. See [basecamp-load.md](basecamp-load.md).
-
-- **No narrated video.** P-S6 unmet.
-
+- **No narrated video.** P-S6 unmet. The script is written; the recording is a human gate.
 - **The public explorer has not indexed all of the evidence.** Every transaction answers over
   JSON-RPC and `verify-onchain.sh` reads them all; the explorer renders the two program deployments
-  but not yet the five lifecycle transactions. `./scripts/check-explorer-links.sh` says which, and
-  exits 75 rather than passing quietly.
+  but not yet the five lifecycle transactions. `check-explorer-links.sh` says which, and exits 75.
+- **The Basecamp module ships one platform variant**, `darwin-arm64` — the machine it was built on.
+  Nothing in it is macOS-specific; no second machine was available to build and test the others, and
+  shipping an untested variant is worse than shipping none.
+- **Basecamp needs `QT_ENABLE_REGEXP_JIT=0`** to open the module at all. That is the host's bug,
+  reproduced and filed, not a defect in this module — but it is a step a reviewer has to take.
+- **Approvals cannot be submitted from the GUI.** By design, and explained on the page: the witness is
+  a spending key and the module builds public transactions.
 
-Full list: [limitations.md](limitations.md).
-
-## Why Logos
-
-[why-logos.md](why-logos.md). Briefly: this scheme needs shielded accounts whose repeated use is
-unlinkable, and execution that can depend on secrets the chain never sees. LEZ provides both in the
-base layer; on a chain where validators must see the inputs, it is not possible at all.
+Full list:
+[`docs/limitations.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/limitations.md).
 
 ## Honest notes
 
 - SPEL is pinned to `main`, not the v0.6.0 release, because the release pins LEZ v0.2.0 and derives
-  private account ids the live testnet does not recognise. An unreleased dependency is a real cost;
-  it is taken deliberately and recorded.
-- Things we got wrong and fixed are in [tried-failed.md](tried-failed.md), including a leak of the
-  member's spending key into the guest journal that we shipped, then caught by decoding the journal
-  rather than trusting a byte scan.
-- Upstream papercuts found along the way: [BUGS_FILED.md](BUGS_FILED.md).
+  private account ids the live testnet does not recognise. An unreleased dependency is a real cost; it
+  is taken deliberately and recorded.
+- Things we got wrong and fixed are in
+  [`docs/tried-failed.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/tried-failed.md),
+  including a leak of the member's spending key into the guest journal that we shipped, then caught by
+  decoding the journal rather than trusting a byte scan — and a second instance of the same class,
+  where the same key was found sitting in a run log.
+
+## Terms & Conditions
+
+By submitting this solution I confirm that I have read and accept the λPrize
+[Terms & Conditions](https://github.com/logos-co/lambda-prize/blob/master/TERMS.md), that the work is
+my own original work created for this prize, and that the repository is public under
+**MIT OR Apache-2.0**. Eligibility determinations rest with the organisers.

@@ -4,8 +4,11 @@
 - Prize source: ../lambda-prize/prizes/LP-0002.md
 - Sibling layout: intentional — easy human eval side-by-side
 - Solution repo absolute path: /Users/muhammadbaguspramadani/Documents/myproject/lp-0002-private-multisig
-- Current phase: **E (demo.sh + CI e2e)** — IN PROGRESS. The lifecycle *is* implemented end to end (create → propose → approve at full M → execute); what is missing is a completed unattended run.
-- Last green SC: SC-D.1–SC-D.5 (Phase D). Phase E: SC-E.3/E.5/E.7 green; E.1/E.4/E.6 not met
+- Current phase: **H (submission packet)**. Phase E closed 2026-09-09: the unattended run it was
+  waiting on completed twice on the same day — CI run 34275830322 (2 h 54 m, two 75-minute proofs at
+  `RISC0_DEV_MODE=0`) and a laptop run (`evidence/e2e-local-2026-09-09.md`).
+- Last green SC: Phase E complete (SC-E.1 and SC-E.4 met); Phase F complete (the Basecamp module
+  installs, opens and reads the chain). Outstanding: the narrated video, and the explorer index.
 - Blockers: the testnet reset on 2026-09-08 is **handled** — redeployed the same day, and
   `verify-onchain.sh` re-read the whole lifecycle from public data on 2026-09-09 (exit 0).
   Outstanding: the public explorer has indexed the two program deployments but not yet the five
@@ -16,7 +19,7 @@
   2026-09-06, run 34052567273, and again on 2026-09-09 on the current pin — run 34275830322,
   2 h 54 m, two proofs of 75 min each.) Each run has failed further along than the last: missing guest toolchain → missing `libpcsclite` → a SIGPIPE panic in our own script (`docs/tried-failed.md`). Every failure so far has been a real defect, and the job fails rather than faking a pass. The build itself is large: a full blockchain node plus a C++ groth16 stack, ~12 min before anything else starts. (#105 eligibility: operator decided 2026-09-04 to proceed through Phase I — `docs/phase-N1-status.md` §3.)
 
-- Remote: https://github.com/pramadanif/lp0002 (public)
+- Remote: https://github.com/pramadanif/lp-0002-private-multisig (public)
 
 ## Pins (settled in Phase −1, evidence-backed)
 
@@ -30,17 +33,19 @@
 
 ## Abort watch
 
-| Date (UTC) | `gh pr view 125 … reviewDecision` | Merged LP-0002 PR? | Action |
-|------------|-----------------------------------|--------------------|--------|
-| 2026-09-04 | *(empty — not APPROVED)* | none | continue |
+| Date (UTC) | Competing LP-0002 PR | Merged LP-0002 PR? | Action |
+|------------|----------------------|--------------------|--------|
+| 2026-09-04 | #125 *(empty — not APPROVED)* | none | continue |
+| 2026-09-07 | #125 **CLOSED, not merged** | none | continue |
+| 2026-09-09 | **#143 OPEN** — "LP-0002 — Private M-of-N Multisig (resubmission of #133)", `jeefxM`, opened 2026-09-08 20:53 UTC | none | continue — the prize is unclaimed while nothing is merged, but this is now a race, and the video is the only thing between this work and a submission |
 
 ## Human gates outstanding
 
 | Gate | Needed by | State |
 |------|-----------|-------|
 | ~~Funded LEZ testnet keys~~ | — | **NOT A HUMAN GATE.** LEZ ships a proof-of-work faucet (Piñata). `./scripts/fund-testnet.sh` obtains funds unattended — verified: balance 150 → 300 on the public testnet |
-| Narrated video URL + transcript | Phase H (W5/H11) | not yet requested |
-| Basecamp click-QA (if automation fails) | Phase F | not yet needed |
+| Narrated video URL + transcript | Phase H (W5/H11) | **requested** — shot list and narration ready in `docs/video-transcript.md`; this is the last blocking deliverable |
+| Basecamp click-QA (if automation fails) | Phase F | **done** — the module was opened in Basecamp 0.2.3 and its panels read the deployed multisig |
 
 ## Carried forward
 

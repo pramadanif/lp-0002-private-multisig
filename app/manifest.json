@@ -3,7 +3,7 @@
   "category": "blockchain",
   "dependencies": [],
   "description": "Private M-of-N multisig for LEZ: shielded members approve without revealing which member approved. Threshold-only on-chain state.",
-  "homepage": "https://github.com/pramadanif/lp0002",
+  "homepage": "https://github.com/pramadanif/lp-0002-private-multisig",
   "icon": "icon.png",
   "license": "MIT OR Apache-2.0",
   "main": {

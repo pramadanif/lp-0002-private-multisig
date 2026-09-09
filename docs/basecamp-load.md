@@ -1,6 +1,7 @@
 # Loading the module in Logos Basecamp
 
-`app/private_multisig.lgx` — 2632590 bytes, sha256 `c8056283a7f9c7b5ccca32841ec195bd011e54c54cea217f217b80e7f436fd06`, variant **darwin-arm64**.
+`app/private_multisig.lgx` — 2664654 bytes, sha256 `3fabf0391ef27d3bf66d6e8f010f1547205d8054e85fd90c2127459e97eefe0b`, variant **darwin-arm64**.
+(Rebuild changes the hash — always re-check with `shasum -a 256 app/private_multisig.lgx` before filming or submitting.)
 
 Verify what you downloaded before installing it:
 
@@ -53,11 +54,13 @@ Then, on **Config**, paste the `config_hash` and press ↻; on **Proposal**, the
 
 ## What each panel does, and how that was checked
 
-**Read this first.** Everything in the table below was measured by driving the plugin's own slots
-from `scripts/check-basecamp-contract.sh`, against the live deployment in
-[DEPLOYMENT.md](DEPLOYMENT.md). That is the same code the buttons call — but it is **not** the same
-host. Inside Logos Basecamp these panels are currently **inert**, because the module has no replica
-factory (below). The table says what the module's code does, not what Basecamp does with it yet.
+These panels work inside Logos Basecamp. Each row below was also measured directly, by driving the
+plugin's own slots from `scripts/check-basecamp-contract.sh` against the live deployment in
+[DEPLOYMENT.md](DEPLOYMENT.md) — the same code the buttons call, so a failure is caught by a script
+rather than by a person clicking.
+
+Getting there needed the replica factory described below, and Basecamp itself has to be started with
+`QT_ENABLE_REGEXP_JIT=0` — see [BUGS_FILED.md](BUGS_FILED.md) §8.
 
 | Panel | State | How |
 |-------|-------|-----|
@@ -69,7 +72,7 @@ factory (below). The table says what the module's code does, not what Basecamp d
 | Wallet → decode | works | `decodeAccount` on the config PDA returns `type: MultisigConfig` with the fields above — this is what the IDL's account layouts bought |
 | Create Multisig · Create Proposal · Approve · Execute | wired | These submit transactions, so they are not fired at the public chain by a check. What is asserted is that the slot reaches the FFI and reports: `execute` with a seed that cannot be hex returns an error rather than doing nothing. The lifecycle evidence comes from the CLI |
 
-## The piece still missing: a replica factory
+## The piece nothing documents: a replica factory
 
 A `ui_qml` module is loaded in two processes, and the QML side does not build the connection itself.
 Basecamp's bridge loads a **second** plugin, beside the first and named for the module, and asks it
@@ -83,128 +86,39 @@ qml: private_multisig: no backend — … logos.module("private_multisig") resol
 Basecamp's own `package_manager_ui` ships exactly this, as `package_manager_ui_replica_factory.dylib`.
 The interface is undocumented and no headers ship with the application; its IID is
 `logos.view.replica_factory/1.0`, and its shape can be read out of that reference plugin's vtable —
-the secondary sub-vtable begins directly with `acquire(QRemoteObjectNode*)`, so there is no virtual
-destructor, and `replicaMetaObject()` follows it.
-
-**A first attempt at that plugin made Basecamp crash on startup and was withdrawn.** The crash is in
-Basecamp's own QML url interceptor, compiling a regex through PCRE2's JIT — no frame of ours appears
-in it — but it happened only in sessions where our factory was mapped, three times, and never before
-the factory existed. Three explanations were tested and all three were disproved: a build-machine
-`LC_RPATH` (dyld reuses the host's already-loaded Qt, so no second copy is created), a duplicate
-QtCore (measured: one before, one after), and an ad-hoc code signature (a hardened, JIT-entitled test
-host loads the same dylib and still JIT-compiles regexes happily). The cause is not yet known, and
-the plugin stays out of the package until it is.
-
-## Why the panels rendered and did nothing
-
-The module shipped for a day looking complete and doing nothing: every panel drew, and no button
-had any effect. The cause is the part of Basecamp's module contract that is not written down.
-
-A `ui_qml` module is loaded **twice over**. The plugin dylib goes into a `ui-host` child process,
-which calls `initLogos` and then publishes the plugin object over QtRemoteObjects under the module's
-name. The QML named by the manifest's `view` is loaded by the **main** Basecamp process, in an
-engine the plugin never touches. So the `backend` context property the scaffold set on its own
-`QQuickWidget` engine was never in scope where the QML actually ran:
+its secondary sub-vtable is
 
 ```
-file:///…/plugins/private_multisig/qml/Main.qml:297: ReferenceError: backend is not defined
+[offset-to-top][typeinfo][~dtor D1][~dtor D0][acquire(QRemoteObjectNode*)][replicaMetaObject() const]
 ```
 
-Line 297 is the fetch button. Basecamp logs this as a *warning* and carries on rendering, so the
-window looks finished. Nothing in the build catches it, because everything builds and the standalone
-preview app — which does set that context property — works perfectly.
+so the destructor is virtual and comes **first**. That detail is not cosmetic: a wrong layout is not
+a compile error, and the host calls what it believes is `acquire` at a fixed slot and lands on
+whatever is there.
 
-Basecamp's own `package_manager_ui` shows the contract: its QML reaches C++ as
-`logos.module("package_manager_ui")`, and the properties and slots it reads live on the **plugin**
-class. So:
+**Two crashes came out of getting this wrong, and both are worth knowing about.**
 
-- `PrivateMultisigPlugin` now carries the whole API and forwards to the backend. The methods are
-  public **slots**, because QtRemoteObjects replicates properties, signals and public slots — a
-  `Q_INVOKABLE` that is not a slot would not be callable from the replica.
-- `Main.qml` resolves its backend from either host: the `ctxBackend` context property when it is
-  loaded in-process, otherwise `logos.module("private_multisig")`. One file, both hosts.
+The first attempt handed back a *dynamic* replica and omitted that virtual destructor. Basecamp died
+on opening the module, in its own QML url interceptor, with no frame of ours in the backtrace.
+Several plausible causes were proposed and each was **disproved by measurement** rather than argued
+away: a build-machine `LC_RPATH` (dyld reuses the host's already-loaded Qt, so no second copy is
+created — measured, one before and one after), an ad-hoc code signature (a hardened, JIT-entitled
+test host loads the same dylib and JIT-compiles regexes happily), and loading any third-party dylib
+at all (Basecamp's own bundled `logos_delivery_demo` ships a factory and opens fine).
 
-`./scripts/check-basecamp-contract.sh` asserts both halves, and CI runs it. Reverting `Main.qml` to
-the context-property form makes it fail with 47 unresolved bindings — the same count the Basecamp
-log showed.
+What actually lay underneath was two separate bugs stacked on each other:
 
-## Why `lgx` cannot build this package
+1. **Basecamp's**, described in [BUGS_FILED.md](BUGS_FILED.md) §8 — its QML sandbox JIT-compiles a
+   regex under a hardened runtime with no `allow-jit` entitlement. `QT_ENABLE_REGEXP_JIT=0` removes
+   it.
+2. **Ours**, which the first bug had been masking: the missing destructor slot. With the JIT crash
+   gone, the real one surfaced as an instruction fetch into libc++abi's RTTI data, two slots off.
 
-`lgx` 0.1.0 — the current release — writes **manifestVersion 0.5.0** packages, with the icon in a
-top-level `assets/` directory. **Logos Basecamp 0.2.3 reads the 0.3.0 layout**, where the icon and
-`metadata.json` live inside the variant. A 0.5.0 package installs with no error and no effect:
-Basecamp logs `installPlugin` and then nothing at all, and the module never appears. The tool is
-ahead of the application that has to load its output.
-
-`scripts/pack_lgx.py` therefore writes the archive directly. Its hash scheme is documented nowhere;
-it was derived by testing candidates against a package that does install — `logos_delivery_demo`
-0.2.1 from the official repository — until all three of its recorded hashes reproduced exactly:
-
-```
-hashes["variants/<v>"] = sha256( Σ "<path in variant>\0<sha256 of contents>\n" , sorted )
-hashes["variants"]     = sha256( Σ "<variant>\0<that variant's hash>\n" , sorted )
-hashes["root"]         = sha256( "variants\0<the variants hash>\n" )
-```
-
-`build-basecamp.sh` reads those hashes back out of the finished archive and recomputes them, so a
-packaging bug cannot ship a package that merely claims to be consistent.
-
-## Two other things that had to match
-
-**Qt version.** The plugin must be built against the Qt the host ships, not the newest one
-installed. Qt embeds a version tag symbol, so a plugin built against 6.11 cannot be loaded by an
-application carrying 6.9: `dlopen` fails with `Symbol not found: _qt_version_tag_6_11`, and
-Basecamp does not log `dlopen` failures. Basecamp 0.2.3 carries **Qt 6.9.2**:
-
-```bash
-python3 -m aqt install-qt mac desktop 6.9.2 clang_64 -O ~/qt-basecamp
-```
-
-**Library paths.** As linked, the plugin named absolute paths on the build machine — Qt under
-`/opt/homebrew/...` and the FFI library under this checkout's `target/`. Neither exists inside
-Basecamp. `build-basecamp.sh` repoints them at `@rpath` and `@loader_path` and refuses to package
-while any build-machine path remains.
-
-## Why an earlier package installed but never appeared
-
-The metadata has to be written into the manifest **before** `lgx add`, not after. `lgx create`
-leaves a skeleton with no hashes; `lgx add` computes `hashes.root` over whatever the manifest says
-at that moment. An earlier build edited the manifest afterwards, so the recorded root hash described
-a file that no longer existed.
-
-Basecamp only checks it on the `ui_qml` install path — which is why the very first package, whose
-`type` was empty, installed happily and then sat there with Type "-": Basecamp never took that path.
-Setting the type correctly took the path, the hash did not match, and the install failed with no
-message at all. The log shows `installPlugin` being called and then nothing — no error, no
-"UI plugin file installed".
-
-`scripts/build-basecamp.sh` now patches the manifest between `create` and `add`.
-
-## If Type shows "-"
-
-That is the manifest, not the package. Read the installed copy:
-
-```bash
-cat ~/Library/Application\ Support/Logos/LogosBasecamp/plugins/private_multisig/manifest.json
-```
-
-`type` must be `ui_qml` and `icon` must name a file that exists in the package. An earlier build
-declared `"type": "ui"`, which Basecamp stored as `""`, and pointed `icon` at an `icon.svg`
-that was never packaged — so the row had no type, no icon, and the module never reached
-Applications. Both are fixed; `scripts/build-basecamp.sh` now refuses to package without a
-256×256 PNG icon, and `scripts/patch_lgx_manifest.py` carries `type` and `icon` into the
-package manifest because `lgx` itself leaves them empty.
-
-## Building it yourself
-
-```bash
-./scripts/build-basecamp.sh          # needs Qt6, cmake, ninja and the lgx tool
-```
-
-It builds the C ABI library the UI calls, checks that **every** `extern "C"` symbol
-`app/src/PrivateMultisigBackend.cpp` declares is actually exported, builds the Qt plugin, and only
-then packages. A missing symbol fails the build rather than producing a package that installs and
-then cannot call the program.
+The interface now lives in one header shared by the factory and its test — because the test kept its
+own copy, drifted from the factory, and reproduced Basecamp's crash in our own process, which is how
+the layout was finally pinned down. `scripts/check-basecamp-contract.sh` publishes the plugin,
+acquires a replica through the shipped factory, and asserts the two pair and that a slot call
+travels: source and replica signatures match, and a value set through the replica comes back.
 
 ## What is and is not claimed
 
@@ -219,7 +133,8 @@ decodes it to the 2-of-3 in [DEPLOYMENT.md](DEPLOYMENT.md):
   ok     the fetched multisig is the deployed 2-of-3
 ```
 
-**But that is a harness, not Basecamp.** Inside Basecamp the panels are inert until the module ships
-a replica factory, and it does not yet. It also carries only the `darwin-arm64` variant — the
-platform it was built on. Both are recorded in [limitations.md](limitations.md) and against P-U2 in
-[criteria-checklist.md](criteria-checklist.md).
+That is a harness; the same panels also read the same deployment inside Basecamp itself, which is
+what the module is for. Two limits stand: the package carries only the `darwin-arm64` variant — the
+platform it was built on — and Basecamp must be started with `QT_ENABLE_REGEXP_JIT=0`, which is the
+host's bug rather than this module's. Both are recorded in [limitations.md](limitations.md) and
+against P-U2 in [criteria-checklist.md](criteria-checklist.md).

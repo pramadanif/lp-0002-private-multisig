@@ -33,7 +33,7 @@ via `env::verify`.
 
 - Prize: [`docs/plan/LP-0002.md`](plan/LP-0002.md) — $1,200, deadline **2026-09-11**
 - Target repo: `logos-co/lambda-prize`, PR against `main`
-- Solution repo: <https://github.com/pramadanif/lp0002> (public, dual MIT/Apache-2.0)
+- Solution repo: <https://github.com/pramadanif/lp-0002-private-multisig> (public, dual MIT/Apache-2.0)
 - The competing open PR is **#125** (edenbd1) — open, not approved. See §6.
 
 ---

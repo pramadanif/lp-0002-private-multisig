@@ -1,306 +1,200 @@
-# lp-0002-private-multisig
+# LP-0002: Private M-of-N Multisig for LEZ
 
-A **private M-of-N multisig** for the Logos Execution Zone (LEZ): members hold shielded accounts,
-approvals leave no public trace of who voted, and on-chain state records only that a threshold was
-met — never which members approved.
+A private M-of-N multisig for the Logos Execution Zone: shielded members approve without revealing
+who voted. On-chain state records a threshold and nullifiers — never member identities.
 
 Built for [λPrize LP-0002](docs/plan/LP-0002.md). Licensed **MIT OR Apache-2.0**.
 
-Repository: <https://github.com/pramadanif/lp0002>
+Repository: <https://github.com/pramadanif/lp-0002-private-multisig>
 
-> **Status: the full lifecycle runs on the LEZ public testnet.** (Redeployed 2026-09-08 after the
-> testnet was reset — a reset wipes every deployment, so this is re-run close to submission.) A 2-of-3 multisig was created,
-> funded, proposed against, approved twice by shielded members anonymously with `RISC0_DEV_MODE=0`,
-> and executed — moving the treasury 100 → 40 and the payee 0 → 60, with both sides of the move
-> visible in accounts owned by two different programs. `./scripts/verify-onchain.sh` re-checks all of
-> it from public data alone and passes, including that the payee named *by the proposal* holds the
-> amount that was approved.
->
-> | | |
-> |-|-|
-> | Network | LEZ public testnet, `https://testnet.lez.logos.co` |
-> | `membership` | ImageID `960db4f2…07eade`, deployed block 62 |
-> | `multisig` | ImageID `79cf1dba…4a60468`, deployed block 63 |
-> | Multisig (config PDA) | `4ZKN1S7R8F9V2fJEzDz65ogabhDi8sDS82W5i4mADZxt` |
-> | Proposal PDA | `32Te128ntLW4wSbT6xDb7SYha7q2g8EjFDYTUoDKHEDF` |
-> | Payee | `9NJmD3awoi9FT1yxZFMCvPxuHDcedZbK6LoZ9ZyhAC1J` |
-> | Lifecycle | create_multisig `007d9ff2…` · propose `aa14aa28…` · approve `a3eaeb3a…` · approve `2a283d3c…` · execute `d1a47fdd…` |
->
-> Every transaction is listed with its explorer link in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
-> CI runs the same lifecycle against a standalone sequencer on every push
-> ([run 34275830322](https://github.com/pramadanif/lp0002/actions/runs/34275830322), 2 h 54 m, green):
-> both approvals proved with `RISC0_DEV_MODE=0` at 75 minutes each on a 4-core runner, then execute at
-> the full 2-of-3.
->
-> The Basecamp module installs in Logos Basecamp 0.2.3, opens from **Applications → Blockchain**,
-> and reads that deployment on screen: the 2-of-3 config, the proposal's two nullifiers and
-> `executed`, and the wallet's accounts (**P-U2**). Getting there needed a *replica factory* plugin
-> Basecamp documents nowhere, and Basecamp itself must be started with `QT_ENABLE_REGEXP_JIT=0` —
-> its QML sandbox JIT-compiles a regex under a hardened runtime that is not entitled to
-> ([`docs/BUGS_FILED.md`](docs/BUGS_FILED.md) §8, §9). The package carries only the `darwin-arm64`
-> variant.
->
-> **Not yet done**, and not claimed: the narrated video (**P-S6**). Five of the eleven evidence URLs
-> are on chain but not yet indexed by the public explorer; `./scripts/check-explorer-links.sh`
-> reports which, and exits 75 until they render.
->
-> [`docs/criteria-checklist.md`](docs/criteria-checklist.md) maps every criterion to its evidence,
-> including what is missing.
+## Narrated demo video
 
----
+**Not recorded yet.** Shot list and required narration (human voice, CLI + Basecamp, `RISC0_DEV_MODE=0`):
+[`docs/video-transcript.md`](docs/video-transcript.md).
 
-## Why a private multisig needs a different architecture
+When published, the URL will be linked here and in the solution file (prize / eng require it in the
+solution packet, not only the PR description).
 
-The existing [lez-multisig](https://github.com/jimmy-claw/lez-multisig) PoC is a *public* multisig,
-and it cannot be adapted to shielded accounts. Its member accounts must be fresh zero-nonce
-keypairs claimed by the multisig program. Shielded LEZ accounts cannot satisfy either half of that:
+## Status
 
-- they are owned by the privacy protocol, not by the multisig program, and
-- their nonce is **not** a counter you can hold at zero. For a private account LEZ derives it as
-  `nonce_init = SHA256(account_id ‖ [0;32])[0..16]` and then advances it as
-  `nonce' = SHA256(nsk ‖ nonce ‖ [0;16])[0..16]` — a fresh value from the member's nullifier
-  secret key on **every** use.
-  (`lee/state_machine/core/src/account.rs` @ `logos-execution-zone` v0.2.4.)
+| | |
+|-|-|
+| Public testnet lifecycle | **Done** — full 2-of-3 create → propose → 2× anonymous approve (`RISC0_DEV_MODE=0`) → execute. Verified with `./scripts/verify-onchain.sh` from public data alone (INV-7: payee holds 60). |
+| Local / CI demo | **Done** — `./demo.sh` against a standalone LEZ sequencer; CI e2e with real proofs ([run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322)). |
+| Basecamp `.lgx` | **Done (darwin-arm64)** — installs as `ui_qml` under Applications → Blockchain. See [`docs/basecamp-load.md`](docs/basecamp-load.md). Approve stays in CLI/SDK (module does not submit PPE approvals). |
+| Explorer index | **Pending** — txs are on the sequencer; some explorer pages still WAIT. Re-run `./scripts/check-explorer-links.sh` before opening a solution PR. |
+| Narrated video | **Outstanding** (human gate) — P-S6. |
 
-So membership cannot be proven by "the program owns your account". It has to be proven in zero
-knowledge: *I control an account whose commitment is in the member set*, without saying which one.
+Per-criterion map: [`docs/criteria-checklist.md`](docs/criteria-checklist.md).  
+Limitations: [`docs/limitations.md`](docs/limitations.md).
 
-## Approach
+## Public-testnet deployment
 
-Locked in [`docs/adr/ADR-001-architecture.md`](docs/adr/ADR-001-architecture.md) — summarised here:
+Network: `https://testnet.lez.logos.co` · Explorer: `https://explorer.testnet.lez.logos.co`  
+Redeployed **2026-09-08** after a testnet reset. Full recipe: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+| # | Action | Transaction (full hash + explorer) |
+|---|--------|--------------------------------------|
+| 1 | Deploy `membership` | [`fe3a65ee4127a821847514d0350df479c86cb9b6d14c399c5608b36dde333fdc`](https://explorer.testnet.lez.logos.co/transaction/fe3a65ee4127a821847514d0350df479c86cb9b6d14c399c5608b36dde333fdc) |
+| 2 | Deploy `multisig` | [`ef9029b2a9d4ef8c261e02af21b9a099ceba510a58a05407ff4a60714bb08d4e`](https://explorer.testnet.lez.logos.co/transaction/ef9029b2a9d4ef8c261e02af21b9a099ceba510a58a05407ff4a60714bb08d4e) |
+| 3 | `create_multisig` | [`007d9ff27063b39843af29443abbcd40923de9fc4a17d9963d0521b9217e8a13`](https://explorer.testnet.lez.logos.co/transaction/007d9ff27063b39843af29443abbcd40923de9fc4a17d9963d0521b9217e8a13) |
+| 4 | `create_proposal` | [`aa14aa283a0cdb5de76fee512a24aff1da30e73a6ae88cc7079a621e2a3db1d3`](https://explorer.testnet.lez.logos.co/transaction/aa14aa283a0cdb5de76fee512a24aff1da30e73a6ae88cc7079a621e2a3db1d3) |
+| 5 | Approve (PPE) | [`a3eaeb3a773f35a48935944ca1b15bed683265dbded90633c094e4ef56aa4f4b`](https://explorer.testnet.lez.logos.co/transaction/a3eaeb3a773f35a48935944ca1b15bed683265dbded90633c094e4ef56aa4f4b) |
+| 6 | Approve (PPE) | [`2a283d3c8887ef552bf56f415bbd6b534a4424e0765b590f3b44f6f6215a0aaa`](https://explorer.testnet.lez.logos.co/transaction/2a283d3c8887ef552bf56f415bbd6b534a4424e0765b590f3b44f6f6215a0aaa) |
+| 7 | `execute` | [`d1a47fddeddbfebd1a387f52ac91ecaed43f8c20275d6fb82bf3acd2f460057e`](https://explorer.testnet.lez.logos.co/transaction/d1a47fddeddbfebd1a387f52ac91ecaed43f8c20275d6fb82bf3acd2f460057e) |
+
+| Field | Value |
+|-------|--------|
+| `membership` ImageID | `960db4f24de1f1b0ebdc064a9be1246bde0e6a06f8be7f349fa562cc4207eade` |
+| `multisig` ImageID | `79cf1dbaffe6295ce97af319e139220380d3da8ed4a877a12fd35cedc4a60468` |
+| Config PDA | `4ZKN1S7R8F9V2fJEzDz65ogabhDi8sDS82W5i4mADZxt` |
+| Proposal PDA | `32Te128ntLW4wSbT6xDb7SYha7q2g8EjFDYTUoDKHEDF` |
+| Payee | `9NJmD3awoi9FT1yxZFMCvPxuHDcedZbK6LoZ9ZyhAC1J` |
+| `config_hash` | `99cff7fa1f0c4fa267f29d34baafd720906a0e4259e013bc2ca42ac53498fbe4` |
+| `proposal_seed` | `f47f48e87e171ea02816f28fe542e50677a36f23f948e7956db994a9aefba255` |
+| Threshold | **2-of-3 (full M)** |
+
+Re-check anytime:
+
+```bash
+./scripts/verify-onchain.sh
+./scripts/check-explorer-links.sh
+```
+
+## Quickstart
+
+```bash
+# Toolchain (once): Rust 1.94+, risc0 r0vm — see docs/VERSIONS.md
+# Linux: sudo apt-get install -y pkg-config libpcsclite-dev
+
+./scripts/build-guests.sh --docker   # reproducible guests (required before deploy)
+./demo.sh                            # prize demo: standalone sequencer, RISC0_DEV_MODE=0
+                                     # ~40–50+ min wall-clock (two composed approvals ~20 min each)
+```
+
+`demo-fast.sh` is a development tour only — **not** the prize demo.
+
+**RAM:** a composed approval needs ~9 GB free. Close the browser first or the prover looks hung.
+
+## Performance
+
+Measured figures: [`docs/cu-costs.md`](docs/cu-costs.md).
+
+| | |
+|--|--|
+| On-chain CU (numeric per ix) | `create_multisig` 155,809 · `create_proposal` 257,625 · `execute` 315,293 · `verify_approval` 602,662 |
+| Standalone membership prove | ~116 s |
+| Composed approval (what members pay) | ~21–22 min on laptop; ~75 min on 4-core CI |
+| Peak RAM | ~8.7 GB |
+
+## Architecture
+
+Full write-up: [`docs/adr/ADR-001-architecture.md`](docs/adr/ADR-001-architecture.md).
 
 | Decision | Choice |
 |----------|--------|
-| Approve path | **Privacy-preserving execution** (chained `env::verify`), never public re-execution |
-| Membership proof | LEZ-native guest emitting a `ProgramOutput`, verified as a chained call |
-| Anchoring | PDA seeded by `config_hash`, binding the member set and the threshold `M` together |
-| Binding | Proof is bound in-circuit to a **live** shielded account commitment, not merely derived off-chain |
-| Double-vote prevention | Nullifier set on-chain, one nullifier per (member, proposal) |
-| Peer privacy | Co-members learn the approval **count**, never who approved |
-| Reference action | Treasury transfer, default 2-of-3 |
-
-Anchoring the member root **and** `M` in the PDA seed is what stops the obvious attack: a prover who
-invents their own member set, or quietly lowers the threshold, derives a different PDA and simply
-does not find the multisig there.
-
-The multisig's config account lives at `for_public_pda(program_id, PdaSeed(config_hash))`, where
+| Approve path | Privacy-preserving execution (chained `env::verify`), never public re-execution |
+| Membership | LEZ-native guest; nullifier per (member, proposal) |
+| Anchoring | PDA seeded by `config_hash` (member root + M + N + program ids) |
+| Binding | In-circuit live shielded account, not derivation-only |
+| Execute | Public, permissionless; recipient + amount frozen in the proposal (INV-7) |
 
 ```text
 config_hash = SHA256( DS_CONFIG ‖ member_root[32] ‖ M[1] ‖ N[1] ‖ multisig_id[32] ‖ membership_program_id[32] )
-DS_CONFIG   = "/LP0002/v1/ConfigHash/" ++ [0u8; 10]      // 22 + 10 = 32 bytes
+DS_CONFIG   = "/LP0002/v1/ConfigHash/" ++ [0u8; 10]
 ```
 
-This line is the single definition of `config_hash` in the project; [ADR-001
-§3](docs/adr/ADR-001-architecture.md) and the solution write-up quote it verbatim, and preflight check
-PF-13 fails the build if the three ever drift apart.
+Preflight **PF-13** fails if this formula drifts across README / ADR-001 / SOLUTION_DRAFT.
 
-## Build status
-
-Each phase has a status document recording the exact commands run, their exit codes and log paths.
-
-| Phase | What it delivers | Status |
-|-------|------------------|--------|
-| −1 | Competitor + environment preflight, version pins | ✅ [`docs/phase-N1-status.md`](docs/phase-N1-status.md) |
-| 0 | Repo skeleton, dual licence, CI, preflight harness | ✅ [`docs/phase-0-status.md`](docs/phase-0-status.md) |
-| A | ADR, account model, security model, error codes | ✅ [`docs/phase-A-status.md`](docs/phase-A-status.md) |
-| B | Membership + nullifier guest, one real `RISC0_DEV_MODE=0` proof | ✅ [`docs/phase-B-status.md`](docs/phase-B-status.md) |
-| C | SPEL program: create / propose / approve / execute, IDL | ✅ [`docs/phase-C-status.md`](docs/phase-C-status.md) |
-| D | SDK, CLI, restart-resume, peer privacy | ✅ [`docs/phase-D-status.md`](docs/phase-D-status.md) |
-| E | `demo.sh` against a standalone sequencer, CI e2e | ✅ [`docs/phase-E-status.md`](docs/phase-E-status.md) |
-| F | Basecamp app, downloadable `.lgx` | ◐ built and committed; one variant, not yet shown loading — [`docs/phase-F-status.md`](docs/phase-F-status.md) |
-| G | Testnet deployment, CU costs, public verification | ✅ [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) |
-| H | Documentation, preflight green, narrated video | ◐ video outstanding (human gate) |
-
-Progress and blockers: [`docs/TRACKING.md`](docs/TRACKING.md).
-Criteria and their status: [`docs/criteria-checklist.md`](docs/criteria-checklist.md). The criteria list alone, with the plan's `P-*` ids: [`PRIZE_CHECKLIST.md`](PRIZE_CHECKLIST.md).
-
-## Pinned versions
-
-Established by measurement, not assumption — see [`docs/VERSIONS.md`](docs/VERSIONS.md).
-
-| Component | Pin |
-|-----------|-----|
-| LEZ | **v0.2.4** |
-| SPEL | **`main` @ `5126b7ed8a9b`** (the v0.6.0 release pins LEZ v0.2.0 and derives different private account ids) |
-| Rust (host) | 1.94.0 |
-| risc0 | 3.0.5 (`r0vm`, `cargo-risczero`); guest toolchain 1.97.0 |
-
-The LEZ pin was settled by fingerprinting the live testnet: a LEZ `ProgramId` is the risc0 ImageID of
-the program ELF, and the ImageIDs of LEZ's committed `artifacts/` binaries match the testnet's
-`getProgramIds` output **exactly at v0.2.4** and not at v0.2.0.
-
-## Building
-
-```bash
-cargo test --workspace          # unit tests
-cargo clippy --workspace --all-targets -- -D warnings
-./scripts/preflight-submission.sh   # submission gate — exits 1 until every check passes
-```
-
-`preflight-submission.sh` exiting 1 is the correct result today: checks whose evidence a later phase
-produces report `PENDING`, and pending is never treated as a pass.
-
-There is no `demo.sh` yet. When it lands (Phase E) it will drive a **real standalone LEZ sequencer**
-with `RISC0_DEV_MODE=0`, and it will fail — not skip — if a required tool is missing.
+**Why not adapt a public multisig?** Shielded accounts are owned by the privacy protocol and do not
+keep a zero nonce the program can claim. Membership must be proven in ZK. Details above and in
+[`docs/why-logos.md`](docs/why-logos.md).
 
 ## End-to-end usage
 
-Criterion **P-S4**. Every command below is real; where something has not been demonstrated yet, it
-says so rather than reading as if it had.
-
-### Prerequisites
+### 1. Build guests
 
 ```bash
-# Rust (the repo pins 1.94.0 to match logos-execution-zone v0.2.4)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Linux only: the LEZ wallet links pcsc-sys, which needs libpcsclite at build time.
-# Without it ./demo.sh builds a sequencer, starts it, and then fails at the wallet.
-sudo apt-get install -y pkg-config libpcsclite-dev
-
-# risc0 — the prover. Without it nothing on the submission path will run, by design.
-curl -L https://risczero.com/install | bash && rzup install
+./scripts/build-guests.sh --docker
 ```
 
-**Memory matters more than CPU.** A composed approval proof peaks at ~8.7 GB and needs roughly
-**9 GB free**. On a loaded machine it swaps and appears to hang — that is the single most common way
-a run "fails". Close your browser first.
-
-### 1. Build the guests
-
-```bash
-./scripts/build-guests.sh            # local toolchain, development
-./scripts/build-guests.sh --docker   # reproducible; REQUIRED for anything deployed
-```
-
-Writes `artifacts/{membership,multisig}.bin` and regenerates `artifacts/IMAGE_IDS.md` with each
-binary's ImageID — which **is** its on-chain `ProgramId`.
-
-### 2. Run the demo
+### 2. Local demo (`RISC0_DEV_MODE=0`)
 
 ```bash
 ./demo.sh
 ```
 
-Starts a real standalone LEZ sequencer, deploys both programs, and drives
-create → propose → approve ×2 → execute with `RISC0_DEV_MODE=0`. Budget ~45 minutes: each approval is
-a real recursive proof.
-
-> **Status:** every step has been demonstrated individually — sequencer, deployment, create, propose,
-> and an anonymous approval confirmed on chain — but `demo.sh` has **not yet completed an unattended
-> run end to end**. See [`docs/phase-E-status.md`](docs/phase-E-status.md).
-
-`demo-fast.sh` is a development tour. It generates no proof and is not the prize demo.
-
-### 3. Deploy to the public testnet
+### 3. Public testnet
 
 ```bash
-./scripts/fund-testnet.sh                       # Piñata faucet — no human gate
+./scripts/fund-testnet.sh
 LEE_WALLET_HOME_DIR=.e2e/wallet-testnet ./scripts/deploy-testnet.sh
+./scripts/verify-onchain.sh
 ```
 
-`fund-testnet.sh` is verified: it initialises an account and claims from LEZ's proof-of-work faucet
-(balance 0 → 150 → 300, blocks 38138/38139/38148).
-
-`deploy-testnet.sh` refuses to run against a local node, refuses to deploy a non-reproducible build,
-and writes `docs/DEPLOYMENT.md` with explorer links, then verifies them.
-
-> **Status:** not yet run. There are no public-testnet program addresses to publish, so this README
-> lists none.
-
-### 4. Verify from public data alone
-
-```bash
-./scripts/verify-onchain.sh          # reads docs/DEPLOYMENT.md
-./scripts/check-explorer-links.sh    # every evidence URL must resolve
-```
-
-`verify-onchain.sh` needs no secrets and no local state: it checks the config account is owned by the
-program, rehashes to its own address, names the deployed verifier, that the threshold was met at full
-M with distinct nullifiers, that the proposal executed — and that at least one published transaction
-is genuinely `PrivacyPreserving`.
-
-### 5. The CLI
+### 4. CLI
 
 ```bash
 cargo run -p pmsig-cli --bin pmsig -- --help
-
-pmsig create   --members <nsk,nsk,nsk> --m 2
-pmsig propose  --proposal-id <hex> --recipient <hex> --amount 1000
-pmsig approve  --proposal-id <hex> --member-file <path>   # preferred
-pmsig approve  --proposal-id <hex> --member <nsk>         # warns: visible in `ps`
-pmsig execute  --proposal-id <hex>
-pmsig status   --proposal-id <hex>
+# create / propose / approve / execute / status
+# status prints count + nullifiers — never who approved
 ```
 
-`status` prints a count and the nullifiers — never who approved.
+Approvals that need a real proof go through the CLI/SDK. The Basecamp Approve page is intentionally
+non-submitting: the module builds public transactions and must not take a nullifier secret key.
 
-> **Two limits, stated plainly:** the CLI runs against a local state file (every command prints
-> `[local]`), and `create` takes every member's secret key so one machine can play several members in
-> a demo. A real deployment never does that: each member derives their own npk, shares only that, and
-> keeps their own authentication path.
-
-### 6. The Basecamp app
-
-Install steps, the package hash, and what to do if Basecamp shows Type "-" are in
-[`docs/basecamp-load.md`](docs/basecamp-load.md).
-
+### 5. Basecamp app
 
 ```bash
-./scripts/build-basecamp.sh --regen   # regenerate the module from the IDL
-./scripts/build-basecamp.sh           # build the Qt plugin and package the .lgx
+./scripts/build-basecamp.sh
+# then Install Local Package → app/private_multisig.lgx
 ```
 
-Needs Qt6, CMake and the [`lgx`](https://github.com/logos-co/logos-package) tool. The script fails
-with install instructions rather than skipping — a build that did not happen is not a loadable
-module.
+| | |
+|--|--|
+| Package | `app/private_multisig.lgx` |
+| Size / hash | run `shasum -a 256 app/private_multisig.lgx` (published in [`docs/basecamp-load.md`](docs/basecamp-load.md)) |
+| Type | `ui_qml` · category **Blockchain** |
+| Arch | **darwin-arm64 only** (stated in limitations) |
+| Host note | start Basecamp with `QT_ENABLE_REGEXP_JIT=0` — see [`docs/BUGS_FILED.md`](docs/BUGS_FILED.md) |
 
-> **Status:** the module is generated from the IDL and hardened (the approval witness is never
-> written to disk — `scripts/check-basecamp-privacy.sh` enforces it, and CI runs that check). The
-> `.lgx` is **not built**: the toolchain is not installed here.
+Step-by-step load + Settings fields for the live deployment: [`docs/basecamp-load.md`](docs/basecamp-load.md).
 
+## Components
+
+| Path | Role |
+|------|------|
+| `programs/` | Membership + multisig guests |
+| `crates/sdk`, `crates/cli` | Prove + member API + `pmsig` |
+| `crates/store` | Partial-approval resume across restarts |
+| `app/` | Basecamp Qt/QML module + `.lgx` |
+| `scripts/` | Demo, e2e sequencer, deploy, verify, preflight |
+| `artifacts/` | Guest bins, ImageIDs, IDL |
+| `docs/` | ADR, security, CU, deployment, criteria |
 
 ## Documentation
 
-Everything a reviewer needs, in the order it is usually wanted.
-
 | Document | What it answers |
 |----------|-----------------|
-| [`docs/criteria-checklist.md`](docs/criteria-checklist.md) | Every prize criterion, its status, and the evidence — including what is **not** met |
-| [`docs/limitations.md`](docs/limitations.md) | What this does not do, what is unproven, and what was measured on one machine only |
-| [`docs/adr/ADR-001-architecture.md`](docs/adr/ADR-001-architecture.md) | The architecture, the account model, and the invariants INV-1 … INV-7 |
-| [`docs/adr/ADR-002-bind-verifier-to-config-hash.md`](docs/adr/ADR-002-bind-verifier-to-config-hash.md) | Why the membership verifier is bound into `config_hash` |
-| [`docs/security.md`](docs/security.md) | Threat model: what an attacker can try, and what stops it |
-| [`docs/error-codes.md`](docs/error-codes.md) | Every error code, on-chain and client-side, and the number a client actually sees |
-| [`docs/integration.md`](docs/integration.md) | Using this from another program: what proves what, and what the SDK does *not* do |
-| [`docs/cu-costs.md`](docs/cu-costs.md) | Cycles, proving time and memory, measured |
-| [`docs/lez-account-model.md`](docs/lez-account-model.md) | How LEZ private accounts work, as read from its source |
-| [`docs/lez-admission-rules.md`](docs/lez-admission-rules.md) | The eighteen checks a transaction passes before it reaches a block, and how `execute` satisfies each |
-| [`docs/tried-failed.md`](docs/tried-failed.md) | Approaches that did not work, and why — including bugs we shipped and caught |
-| [`docs/BUGS_FILED.md`](docs/BUGS_FILED.md) | Issues found in upstream LEZ/SPEL while building this |
-| [`docs/VERSIONS.md`](docs/VERSIONS.md) | Every pinned version, and how each pin was established by measurement |
-| [`docs/why-logos.md`](docs/why-logos.md) | Why this belongs on Logos rather than a general-purpose chain |
-| [`docs/PR_SUBMISSION_GUIDE.md`](docs/PR_SUBMISSION_GUIDE.md) | How the prize PR is opened, and what must be true first |
-| [`docs/agent-gap-brief.md`](docs/agent-gap-brief.md) | What is still missing before submission, checked by command |
-| [`docs/session-state.md`](docs/session-state.md) | Where the work stands, what is fixed but unproven, and what to do next |
-| [`docs/plan/`](docs/plan/README.md) | Verbatim copies of the prize text and the build plan this follows |
+| [`docs/criteria-checklist.md`](docs/criteria-checklist.md) | Every prize criterion → evidence |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Live txs + reproduce |
+| [`docs/limitations.md`](docs/limitations.md) | What we do not claim |
+| [`docs/cu-costs.md`](docs/cu-costs.md) | Numeric CU + prove times |
+| [`docs/security.md`](docs/security.md) | Threat model |
+| [`docs/basecamp-load.md`](docs/basecamp-load.md) | Install / open the GUI |
+| [`docs/video-transcript.md`](docs/video-transcript.md) | Recording script |
+| [`docs/tried-failed.md`](docs/tried-failed.md) | Mistakes we made and fixed |
+| [`docs/BUGS_FILED.md`](docs/BUGS_FILED.md) | Upstream Basecamp/LEZ papercuts |
+| [`docs/VERSIONS.md`](docs/VERSIONS.md) | Pins (LEZ **v0.2.4**, …) |
 
-## Repository layout
+## Pinned versions
 
-```
-crates/core      shared types and hash formulas (host + guest)
-crates/multisig-core  on-chain state, error codes, lifecycle rules
-crates/membership-core witness types and the membership check
-crates/sdk       client-side proving, and the member-facing API
-crates/store     local persistence for partial approval sets
-crates/cli       `pmsig` command-line client
-crates/guest-tools  wraps a guest ELF into a risc0 ProgramBinary and reports its ImageID
-programs/        the LEZ guests: `multisig-spel` (SPEL) and `membership-lez`
-app/             the generated Basecamp GUI (QML + C++ backend)
-scripts/         build, e2e against a real sequencer, deployment, and the CI gates
-docs/            ADRs, security model, error codes, limitations, phase status, version pins
-artifacts/       evidence: guest binaries, ImageIDs, IDL, on-chain run output
-```
+| Component | Pin |
+|-----------|-----|
+| LEZ | **v0.2.4** |
+| SPEL | `main` @ `5126b7ed8a9b` (release v0.6.0 pins wrong LEZ for this testnet) |
+| Rust (host) | 1.94.0 |
+| risc0 | 3.0.6 / guest toolchain per `docs/VERSIONS.md` |
 
 ## Licence
 

@@ -22,10 +22,10 @@ PRs → 0. Not aborting.
 
 | SC | Requirement | State | Evidence |
 |----|-------------|-------|----------|
-| **SC0.1** | Public `main` exists | ✅ green | Pushed to <https://github.com/pramadanif/lp0002> (public). `git push -u origin main` → `* [new branch] main -> main` |
+| **SC0.1** | Public `main` exists | ✅ green | Pushed to <https://github.com/pramadanif/lp-0002-private-multisig> (public). `git push -u origin main` → `* [new branch] main -> main` |
 | **SC0.2** | `LICENSE-MIT` + `LICENSE-APACHE` present (**H7**) | ✅ green | Both non-empty, committed in the **first** commit `f6a1a15` per plan §0.4.2 |
 | **SC0.3** | `cargo fmt` + `clippy -D warnings` green | ✅ green | Both exit 0, table above |
-| **SC0.4** | CI green on push to `main` | ✅ green | GitHub Actions run [33868559625](https://github.com/pramadanif/lp0002/actions/runs/33868559625) on push to `main`, `completed/success` in 37s. Jobs: `fmt + clippy + tests` ✅, `shellcheck` ✅, `RISC0_DEV_MODE clobber check (H3)` ✅ |
+| **SC0.4** | CI green on push to `main` | ✅ green | GitHub Actions run [33868559625](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/33868559625) on push to `main`, `completed/success` in 37s. Jobs: `fmt + clippy + tests` ✅, `shellcheck` ✅, `RISC0_DEV_MODE clobber check (H3)` ✅ |
 | **SC0.5** | `docs/VERSIONS.md` committed | ✅ green | `git ls-files docs/VERSIONS.md` → tracked since `f6a1a15` |
 
 ## What was built
@@ -51,7 +51,7 @@ PRs → 0. Not aborting.
 
 ## Publication
 
-Published to <https://github.com/pramadanif/lp0002> (public, created by the operator).
+Published to <https://github.com/pramadanif/lp-0002-private-multisig> (public, created by the operator).
 
 The earlier `gh repo create --public --push` attempt was refused by the sandbox permission classifier
 and was **not** worked around; the operator created the repository and the remote was wired to the
