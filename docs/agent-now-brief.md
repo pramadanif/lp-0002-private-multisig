@@ -44,7 +44,7 @@ description and not the repository.
 | Testnet evidence | **PASS** | redeployed 2026-09-08T15:25Z; `verify-onchain.sh` exit 0 on 2026-09-09 |
 | `check-explorer-links.sh` | **PENDING (external)** | exit 75 — 6 of 11 resolve; the 5 lifecycle transactions are on chain but the explorer has not indexed them |
 | CI fast jobs | **PASS** | all green on the pin |
-| CI e2e standalone | **QUEUED** | the job's concurrency slot is held by an older run; cancelling it was refused by environment permissions. The same script passed locally — full 2-of-3, both approvals with `RISC0_DEV_MODE=0`, verified from chain data ([evidence](../evidence/e2e-local-2026-09-09.md)) |
+| CI e2e standalone | **PASS** | run 34275830322 on pin `c530fc8`, 2 h 54 m: real sequencer, both approvals proved at 75 min each with `RISC0_DEV_MODE=0`, execute at full M, verified from chain data. A local run of the same script passed too ([evidence](../evidence/e2e-local-2026-09-09.md)) |
 | Docs vs reality | **PASS** | README, criteria-checklist, SOLUTION_DRAFT, basecamp-load, evidence and phase-E/F all re-run today |
 | Video | **HUMAN** | not recorded; must show the Basecamp module fetching real state, and use a human voice |
 

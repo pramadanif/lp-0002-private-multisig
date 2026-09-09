@@ -28,7 +28,9 @@ Repository: <https://github.com/pramadanif/lp0002>
 >
 > Every transaction is listed with its explorer link in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 > CI runs the same lifecycle against a standalone sequencer on every push
-> ([run 34052567273](https://github.com/pramadanif/lp0002/actions/runs/34052567273), 3 h 41 m, green).
+> ([run 34275830322](https://github.com/pramadanif/lp0002/actions/runs/34275830322), 2 h 54 m, green):
+> both approvals proved with `RISC0_DEV_MODE=0` at 75 minutes each on a 4-core runner, then execute at
+> the full 2-of-3.
 >
 > The Basecamp module installs in Logos Basecamp 0.2.3, opens from **Applications → Blockchain**,
 > and reads that deployment: `./scripts/check-basecamp-contract.sh` fetches the config through the

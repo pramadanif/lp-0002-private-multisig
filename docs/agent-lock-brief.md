@@ -2,7 +2,7 @@
 
 Pin `0321d01ff4944474aab81cf7aca3896f0d2bbc2a`. Every line below was measured, not recalled.
 
-**SUBMISSION_STATUS = NOT READY** — L1, L2, L7 and L11 open; L3, L4, L5, L6, L8, L9, L10 locked.
+**SUBMISSION_STATUS = NOT READY** — L2 (the public explorer has not indexed five transactions) and L11 (the video, human) open; L1 and L7 now locked, with L3, L4, L5, L6, L8, L9, L10.
 
 ## One paragraph
 
@@ -34,7 +34,7 @@ unconfirmed. Nothing here is "almost": four gates are open.
 | **L4** Full-M testnet lifecycle | **LOCKED** | create_multisig `007d9ff2…` · propose `aa14aa28…` · approve `a3eaeb3a…` · approve `2a283d3c…` · execute `d1a47fdd…`; treasury 100 → 40, payee 0 → 60. DEPLOYMENT.md carries all seven with full hashes and links |
 | **L5** CU numeric | **LOCKED** | cu-costs.md: create_multisig 155,809 · create_proposal 257,625 · execute 315,293 · verify_approval 602,662. Zero occurrences of unavailable/TBD |
 | **L6** demo + DEV_MODE=0 | **LOCKED** | No `RISC0_DEV_MODE=1` on the demo path; `E2E_COMPLETED` sentinel means an abort cannot exit 0; CI's clobber check green |
-| **L7** CI tip green + real e2e | **NOT LOCKED** | Every fast job green on the tip. The `e2e-sequencer` job is **queued**: it has its own concurrency group and the slot is held by an older run proving since 17:20 UTC; cancelling that run was refused by the agent's environment permissions, so the queue is left to drain. The same script was run on this machine instead and passed — full 2-of-3 lifecycle, both approvals proved with `RISC0_DEV_MODE=0`, `VERIFIED from public chain data alone` ([evidence](../evidence/e2e-local-2026-09-09.md)); nothing on the path e2e exercises has changed since that run started. **This gate still needs the CI job green on the final pin** — a local pass is evidence, not the gate |
+| **L7** CI tip green + real e2e | **LOCKED** | Run [34275830322](https://github.com/pramadanif/lp0002/actions/runs/34275830322) on pin `c530fc8`: the `e2e-sequencer` job **succeeded** in 2 h 54 m against a real standalone LEZ v0.2.4 sequencer (`sequencer is live — getLastBlockId = 1`). Both approvals proved with `RISC0_DEV_MODE=0` — **75 minutes each** on a 4-core runner, against 21–22 min on the laptop — then execute at the full 2-of-3, `payment … holds 60, covering the 60 approved (INV-7)`, `treasury: 40 left, exactly funding minus the 60 paid`, `VERIFIED from public chain data alone`. Checked against a skip-to-green: the job asserts `RISC0_DEV_MODE=0`, and the two 75-minute proofs are in the log. The only commit since that pin (`2d69162`) changes `docs/cu-costs.md` and nothing else; its own e2e run is in progress |
 | **L8** Doc one-truth | **LOCKED** | README, criteria-checklist, SOLUTION_DRAFT, phase-E/F, reviewer-gaps rewritten today against measured state; `check-links.sh` passes |
 | **L9** Crypto / claim integrity | **LOCKED** | `cargo test --workspace` 128 passed, 0 failed. Includes INV-7 (execute refuses a recipient the proposal did not name), nullifier double-vote, restart-resume, and the admission-rule transcription |
 | **L10** Solution packet | **LOCKED except the video URL** | Downloads section with the .lgx hash, size, arch and install link; verification one-liners; DEPLOYMENT.md has untrimmed hashes *with* links. Video URL fills in at L11 |
