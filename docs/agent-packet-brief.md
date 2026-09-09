@@ -9,7 +9,7 @@ was done. Measured 2026-09-09.
 | | |
 |-|-|
 | Pin at time of writing | `5f28b47c31e4905efc257b7978d24c63633648f9` (moves until the freeze) |
-| `.lgx` | 2,664,654 bytes, sha256 `3fabf0391ef27d3bf66d6e8f010f1547205d8054e85fd90c2127459e97eefe0b` |
+| `.lgx` | 2,652,219 bytes, sha256 `c2c4310565c059fbcffee19613ade77d9080dbd83f5b906a35a66f3109140f06` |
 | `verify-onchain.sh` | **exit 0** — 2-of-3, full M, INV-7 satisfied, `VERIFIED from public chain data alone` |
 | `check-explorer-links.sh` | **exit 75** — 6 of 11 resolve; the five lifecycle transactions are on chain but not yet indexed |
 | `preflight-submission.sh` | `pass=18 fail=0 pending=2` (PF-09 explorer index, PF-12 video) |
@@ -45,10 +45,13 @@ the judge to do the assembling.
 Each was a real contradiction between two files a judge reads, quoted from both sides.
 
 1. **Package hash.** `SOLUTION_DRAFT.md` and `basecamp-load.md` carried
-   `c8056283…f436fd06` / 2,632,590 bytes while the file on disk was
-   `3fabf039…97eefe0b` / 2,664,654 bytes. A published hash that does not match the artefact is worse
-   than no hash. *(Fixed; `basecamp-load.md` now also says to re-check before filming, because a
-   rebuild changes it.)*
+   `c8056283…f436fd06` / 2,632,590 bytes while the file on disk was `3fabf039…97eefe0b` /
+   2,664,654 bytes. A published hash that does not match the artefact is worse than no hash.
+   *(Fixed — and fixed again after the icon rebuild. Chasing it twice showed the real fault: the
+   packaging step stamped the build time into the gzip header, so the hash moved on every rebuild
+   whether or not anything changed. `pack_lgx.py` now writes deterministically and two builds are
+   byte-identical, which is what makes a published hash worth publishing. Current value in the
+   measured table above.)*
 
 2. **Whether the Basecamp panels work.** `criteria-checklist.md` P-U2 said the module "reads the
    deployed multisig", while `basecamp-load.md` still carried "**inside Basecamp these panels are

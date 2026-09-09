@@ -254,6 +254,10 @@ cp "app/lib/libpmsig_ffi.$LIBEXT" app/.lgx-staging/ \
 cp "$FACTORY_BUILT" "app/.lgx-staging/private_multisig_replica_factory.$LIBEXT" \
   || die "the replica factory did not build; without it every panel is inert"
 [[ -s app/assets/icon.png ]] || die "app/assets/icon.png is missing"
+# Regenerate it with scripts/make-icon.py, not an image editor; --check is that script's own
+# statement of what Basecamp will accept, so a wrong icon fails here rather than after an install.
+python3 scripts/make-icon.py --check app/assets/icon.png >/dev/null \
+  || die "app/assets/icon.png is not a 256x256 RGBA PNG — regenerate it with scripts/make-icon.py"
 cp app/assets/icon.png app/.lgx-staging/icon.png
 [[ -s app/metadata.json ]] || die "app/metadata.json is missing"
 

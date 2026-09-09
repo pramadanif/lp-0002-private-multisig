@@ -61,8 +61,8 @@ camera reading chain state. The URL will be placed here and in the Repository li
   [`docs/DEPLOYMENT.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/DEPLOYMENT.md)
 - **Basecamp module:**
   [`app/private_multisig.lgx`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/app/private_multisig.lgx)
-  — 2,664,654 bytes, sha256
-  `3fabf0391ef27d3bf66d6e8f010f1547205d8054e85fd90c2127459e97eefe0b`, variant `darwin-arm64`;
+  — 2,652,219 bytes, sha256
+  `c2c4310565c059fbcffee19613ade77d9080dbd83f5b906a35a66f3109140f06`, variant `darwin-arm64`;
   `lgx verify` reports the structure valid. Install steps:
   [`docs/basecamp-load.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/basecamp-load.md)
 - **CU costs:** [`docs/cu-costs.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/cu-costs.md)

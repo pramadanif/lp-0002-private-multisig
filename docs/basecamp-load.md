@@ -1,13 +1,20 @@
 # Loading the module in Logos Basecamp
 
-`app/private_multisig.lgx` — 2664654 bytes, sha256 `3fabf0391ef27d3bf66d6e8f010f1547205d8054e85fd90c2127459e97eefe0b`, variant **darwin-arm64**.
-(Rebuild changes the hash — always re-check with `shasum -a 256 app/private_multisig.lgx` before filming or submitting.)
+`app/private_multisig.lgx` — 2652219 bytes, sha256 `c2c4310565c059fbcffee19613ade77d9080dbd83f5b906a35a66f3109140f06`, variant **darwin-arm64**.
+The package is built deterministically, so that hash is a fact about the *inputs*, not about the
+minute it was built: rebuilding from the same tree reproduces it byte for byte. (It did not always.
+Two builds used to differ in four bytes of gzip header — a timestamp — which would have made the
+published hash go stale on every rebuild and made an honest reviewer's mismatch look like tampering.
+`pack_lgx.py` now writes mtime 0 and no stored filename.) Change the icon, the QML or a dylib and
+the hash moves, as it should.
 
 Verify what you downloaded before installing it:
 
 ```bash
 shasum -a 256 app/private_multisig.lgx     # must print the hash above
 lgx verify app/private_multisig.lgx        # "Package structure is valid"
+
+./scripts/build-basecamp.sh                # optional: rebuild and get the same hash back
 ```
 
 ## Install

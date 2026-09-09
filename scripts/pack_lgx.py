@@ -21,7 +21,11 @@ recorded hashes reproduced exactly:
     pack_lgx.py <out.lgx> <variant> <staging-dir> <manifest.json> [--metadata <file>]
 
 Every file under the staging directory goes into the variant. Paths are stored with forward slashes
-and sorted, so the same inputs give the same archive.
+and sorted, and the archive is written deterministically — tar members carry mtime 0 and no owner,
+and the gzip wrapper is given mtime 0 and no stored filename. **This matters because the sha256 of
+this file is published**: without it two builds of identical inputs differ in four bytes of gzip
+header, the published hash goes stale the moment anyone rebuilds, and a reviewer who rebuilds to
+check gets a mismatch that looks like tampering. Verified by building twice and comparing.
 """
 from __future__ import annotations
 
@@ -133,8 +137,11 @@ def main() -> int:
             executable = path.endswith((".dylib", ".so"))
             add(f"variants/{a.variant}/{path}", data, 0o755 if executable else 0o644)
 
-    with gzip.open(a.out, "wb") as gz:
-        gz.write(buf.getvalue())
+    # Not gzip.open: it stores the output filename and the current time in the header, which is the
+    # whole of the difference between two otherwise identical builds.
+    with open(a.out, "wb") as raw:
+        with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as gz:
+            gz.write(buf.getvalue())
 
     size = os.path.getsize(a.out)
     with open(a.out, "rb") as f:

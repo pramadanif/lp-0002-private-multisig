@@ -58,6 +58,13 @@ The new hash and size were synced into `docs/basecamp-load.md`, `docs/SOLUTION_D
 `docs/criteria-checklist.md` (P-U2), `docs/phase-F-status.md` and `docs/agent-lock-brief.md`. The
 README does not hardcode the hash; it links to `basecamp-load.md`.
 
+> **Superseded later the same day.** The module icon was redrawn ([make-icon.py](../scripts/make-icon.py))
+> and the package rebuilt, so the current artefact is sha256
+> `c2c4310565c059fbcffee19613ade77d9080dbd83f5b906a35a66f3109140f06`, 2,652,219 bytes — the values
+> in the table above are the rename rebuild's, kept as the record of that measurement. The embedded
+> `homepage` was re-checked after the icon rebuild and is still the new URL, and the archive still
+> contains zero occurrences of the old name.
+
 ## Operator action required
 
 **The installed copy in Basecamp still carries the old manifest.** Installing does not update in
