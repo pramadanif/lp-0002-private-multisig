@@ -19,17 +19,26 @@ Item {
     property int currentPageIndex: 0
 
     // ── Palette and metrics ──────────────────────────────────────────────
+    // Accent and text come from the Logos palette (#8B9A6E, #F7F2EB, #EAE2D6, #EEEEEE) rather than
+    // the violet this started with. Two notes worth keeping, because both were measured rather than
+    // guessed by rendering the components offscreen with each candidate:
+    //   · the sage #8B9A6E sits in the same family as colSuccess, so an information pill in sage
+    //     and a "executed" pill in green stop being tellable apart. The accent stays cream.
+    //   · #F7F2EB as the accent reads as plain white at button size; #EAE2D6 still reads as cream.
+    //     So: #EAE2D6 accents, #F7F2EB text.
     readonly property color colBg:      "#0e1016"
     readonly property color colSurface: "#161923"
     readonly property color colRaised:  "#1c2030"
     readonly property color colSidebar: "#12141d"
     readonly property color colBorder:  "#262b3b"
-    readonly property color colPrimary: "#7c6ef5"
+    readonly property color colPrimary: "#EAE2D6"
     readonly property color colSuccess: "#3ecf8e"
     readonly property color colError:   "#e05252"
     readonly property color colWarn:    "#e0a352"
-    readonly property color colText:    "#e8e9f0"
-    readonly property color colMuted:   "#878da3"
+    readonly property color colText:    "#F7F2EB"
+    // Derived, not picked: the same hue as the text, desaturated and dimmed. A hand-picked grey
+    // went cold against warm text, and would have to be re-picked by hand every time colText moved.
+    readonly property color colMuted:   Qt.hsla(colText.hslHue, colText.hslSaturation * 0.35, 0.56, 1)
     readonly property int    radius:    12
     readonly property int    pad:       20
     readonly property string mono:      "Menlo, Monaco, Consolas, monospace"
@@ -310,7 +319,10 @@ Item {
         contentItem: Text {
             id: primaryLabel
             text: primary.working ? "working…" : primary.text
-            color: "#ffffff"
+            // White on a violet fill was legible; white on a cream fill is not. Derived from the
+            // fill rather than hardcoded, so changing colPrimary cannot silently make the primary
+            // action unreadable — which is exactly what changing it once already did.
+            color: root.colPrimary.hslLightness > 0.6 ? root.colBg : "#ffffff"
             font.pixelSize: 12
             font.bold: true
             horizontalAlignment: Text.AlignHCenter

@@ -60,7 +60,7 @@ README does not hardcode the hash; it links to `basecamp-load.md`.
 
 > **Superseded later the same day.** The module icon was redrawn ([make-icon.py](../scripts/make-icon.py))
 > and the package rebuilt, so the current artefact is sha256
-> `c2c4310565c059fbcffee19613ade77d9080dbd83f5b906a35a66f3109140f06`, 2,652,219 bytes — the values
+> `1d8b806dfabdc369d8c1546e42ff933a96194eb74f7d78fdb58260768597204d`, 2,653,306 bytes — the values
 > in the table above are the rename rebuild's, kept as the record of that measurement. The embedded
 > `homepage` was re-checked after the icon rebuild and is still the new URL, and the archive still
 > contains zero occurrences of the old name.

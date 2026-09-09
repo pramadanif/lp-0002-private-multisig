@@ -1,6 +1,6 @@
 # Loading the module in Logos Basecamp
 
-`app/private_multisig.lgx` — 2652219 bytes, sha256 `c2c4310565c059fbcffee19613ade77d9080dbd83f5b906a35a66f3109140f06`, variant **darwin-arm64**.
+`app/private_multisig.lgx` — 2653306 bytes, sha256 `1d8b806dfabdc369d8c1546e42ff933a96194eb74f7d78fdb58260768597204d`, variant **darwin-arm64**.
 The package is built deterministically, so that hash is a fact about the *inputs*, not about the
 minute it was built: rebuilding from the same tree reproduces it byte for byte. (It did not always.
 Two builds used to differ in four bytes of gzip header — a timestamp — which would have made the

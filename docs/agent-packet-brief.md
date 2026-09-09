@@ -9,7 +9,7 @@ was done. Measured 2026-09-09.
 | | |
 |-|-|
 | Pin at time of writing | `d8a801bd125112dee452ad2b9cf4210088be8626` (moves until the freeze) |
-| `.lgx` | 2,652,219 bytes, sha256 `c2c4310565c059fbcffee19613ade77d9080dbd83f5b906a35a66f3109140f06` |
+| `.lgx` | 2,653,306 bytes, sha256 `1d8b806dfabdc369d8c1546e42ff933a96194eb74f7d78fdb58260768597204d` |
 | `verify-onchain.sh` | **exit 0** — 2-of-3, full M, INV-7 satisfied, `VERIFIED from public chain data alone` |
 | `check-explorer-links.sh` | **exit 75** — 22 of 27 evidence URLs resolve; five lifecycle transactions are on chain and not yet indexed (two of the seven have since appeared, so the indexer is progressing) |
 | `preflight-submission.sh` | `pass=18 fail=0 pending=2` (PF-09 explorer index, PF-12 video) |

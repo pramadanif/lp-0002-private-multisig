@@ -11,8 +11,8 @@ Abort check at phase start: #125 `reviewDecision` empty; merged LP-0002 PRs → 
 | SC | Requirement | Status | Evidence |
 |----|-------------|--------|----------|
 | **SC-F.1** | README build/load instructions work (**P-U2**) | ✅ | `./scripts/build-basecamp.sh` builds the C ABI library, the Qt plugin and the package end to end; it refuses to package if any symbol the UI calls is missing. Was: nobody has run them to completion, so they are unverified |
-| **SC-F.2** | Release assets downloadable (**H10**) | ✅ | `app/private_multisig.lgx`, committed, 2,652,219 bytes |
-| **SC-F.3** | SHA256SUMS match downloaded bytes | ✅ | sha256 `c2c4310565c059fbcffee19613ade77d9080dbd83f5b906a35a66f3109140f06` |
+| **SC-F.2** | Release assets downloadable (**H10**) | ✅ | `app/private_multisig.lgx`, committed, 2,653,306 bytes |
+| **SC-F.3** | SHA256SUMS match downloaded bytes | ✅ | sha256 `1d8b806dfabdc369d8c1546e42ff933a96194eb74f7d78fdb58260768597204d` |
 | **SC-F.4** | `lgx verify` / ui-host READY recorded | ✅ | The Basecamp log records `ui-host: loaded plugin "private_multisig"` and `Successfully loaded UI module: "private_multisig"`. `./scripts/check-basecamp-contract.sh` then asserts the module is wired to that plugin rather than merely rendering, and fetches the deployed config through it. Only the `darwin-arm64` variant is packaged |
 | **SC-F.5** | `module.json` / metadata present, no validator warning | ✅ | `app/manifest.json` — every required field populated, **6** platform targets. See "the manifest was a trap" below |
 | **SC-F.6** | GUI shows threshold progress **without** other members' account ids | ✅ | `scripts/check-basecamp-privacy.sh` — enforced and mutation-tested, not merely observed |
