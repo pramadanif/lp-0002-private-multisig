@@ -283,7 +283,7 @@ esac
 
 run_ix() { # name, then args
   local name="$1"; shift
-  "$SPEL" --idl "$REPO/artifacts/multisig-idl.json" -p "$REPO/artifacts/multisig.bin" "$@" \
+  "$SPEL" --idl "$REPO/artifacts/multisig.idl.json" -p "$REPO/artifacts/multisig.bin" "$@" \
     > "$OUT/$name.log" 2>&1 || { tail -25 "$OUT/$name.log" >&2; die "$name failed"; }
   grep -q 'confirmed' "$OUT/$name.log" || { tail -25 "$OUT/$name.log" >&2; die "$name was not confirmed"; }
   awk '/tx_hash/{print $2; exit}' "$OUT/$name.log"
@@ -461,7 +461,7 @@ require_free_ram
   # and exits 101 — a successful approval reported as a failure, on the path that produces the
   # submission's on-chain evidence. See docs/tried-failed.md; this was the third instance.
   started=$(date +%s)
-  "$SPEL" --idl "$REPO/artifacts/multisig-idl.json" -p "$REPO/artifacts/multisig.bin" \
+  "$SPEL" --idl "$REPO/artifacts/multisig.idl.json" -p "$REPO/artifacts/multisig.bin" \
     --bin-membership "$REPO/artifacts/membership.bin" -- \
     approve --config-hash "$CONFIG_HASH" --proposal-seed "$PROPOSAL_SEED" \
     --member-root "$MEMBER_ROOT" --claimed-nullifier "${!n}" \

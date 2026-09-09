@@ -17,9 +17,9 @@ use pmsig_multisig_core::Instruction;
 fn idl() -> serde_json::Value {
     let raw = std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../artifacts/multisig-idl.json"
+        "/../../artifacts/multisig.idl.json"
     ))
-    .expect("artifacts/multisig-idl.json — run ./scripts/generate-idl.sh");
+    .expect("artifacts/multisig.idl.json — run ./scripts/generate-idl.sh");
     serde_json::from_str(&raw).expect("the IDL must be valid JSON")
 }
 

@@ -13,12 +13,12 @@
 
 set -euo pipefail
 cd "$(dirname "$0")/.." || { echo "cannot cd to repo root" >&2; exit 1; }
-[[ -s artifacts/multisig-idl.json ]] || { echo "FATAL: artifacts/multisig-idl.json missing" >&2; exit 1; }
+[[ -s artifacts/multisig.idl.json ]] || { echo "FATAL: artifacts/multisig.idl.json missing" >&2; exit 1; }
 
 python3 - <<'PY'
 import json, re, sys
 
-idl = json.load(open("artifacts/multisig-idl.json"))
+idl = json.load(open("artifacts/multisig.idl.json"))
 allowed = {}
 for ix in idl["instructions"]:
     names = [a["name"] for a in ix["accounts"] if not a.get("pda")]

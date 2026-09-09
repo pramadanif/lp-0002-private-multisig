@@ -293,7 +293,7 @@ which carries the full evidence for each.
 - [x] **P-U2** Basecamp GUI: local build, downloadable assets, loadable — the `.lgx` above installs,
       opens, and reads the deployed multisig. Scope: `darwin-arm64` only, and Basecamp must start
       with `QT_ENABLE_REGEXP_JIT=0` (host bug, filed)
-- [x] **P-U3** IDL for the LEZ program, using SPEL — `artifacts/multisig-idl.json`, generated from
+- [x] **P-U3** IDL for the LEZ program, using SPEL — `artifacts/multisig.idl.json`, generated from
       `#[lez_program]` at compile time; the SPEL CLI built working commands from it
 
 ### Reliability

@@ -14,7 +14,7 @@ command -v cargo >/dev/null 2>&1 || { echo "FATAL: cargo not found. Install Rust
 command -v jq >/dev/null 2>&1 || { echo "FATAL: jq not found (needed to format the IDL)." >&2; exit 1; }
 
 mkdir -p artifacts
-OUT=artifacts/multisig-idl.json
+OUT=artifacts/multisig.idl.json
 
 echo "==> generating IDL from #[lez_program] annotations"
 ( cd programs/multisig-spel && cargo run --quiet --bin idl ) | jq . > "$OUT.instructions"

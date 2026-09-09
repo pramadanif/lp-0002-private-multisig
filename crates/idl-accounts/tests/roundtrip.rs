@@ -7,7 +7,7 @@
 )]
 //! The committed IDL must decode the bytes the program actually writes.
 //!
-//! `artifacts/multisig-idl.json` is what the Basecamp module carries (the FFI embeds it) and what
+//! `artifacts/multisig.idl.json` is what the Basecamp module carries (the FFI embeds it) and what
 //! `spel inspect` reads. Its account layouts are derived from the state structs' source by this
 //! crate's binary, so the failure mode to guard against is drift: a field added, reordered or
 //! retyped in `pmsig-multisig-core` without regenerating the IDL. Borsh is positional, so drift
@@ -23,9 +23,9 @@ use spel_framework_core::idl::SpelIdl;
 fn idl() -> SpelIdl {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../artifacts/multisig-idl.json"
+        "/../../artifacts/multisig.idl.json"
     );
-    let text = std::fs::read_to_string(path).expect("artifacts/multisig-idl.json is committed");
+    let text = std::fs::read_to_string(path).expect("artifacts/multisig.idl.json is committed");
     serde_json::from_str(&text).expect("the committed IDL parses")
 }
 

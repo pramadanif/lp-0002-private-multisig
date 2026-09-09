@@ -33,7 +33,7 @@ info() { printf '    %s\n' "$*"; }
 log() { printf '\n==> %s\n' "$*"; }
 
 command -v cargo >/dev/null 2>&1 || die "cargo is required. Install Rust: https://rustup.rs"
-[[ -s artifacts/multisig-idl.json ]] || die "artifacts/multisig-idl.json missing. Run ./scripts/generate-idl.sh"
+[[ -s artifacts/multisig.idl.json ]] || die "artifacts/multisig.idl.json missing. Run ./scripts/generate-idl.sh"
 
 # ─── 1. Regenerate from the IDL ─────────────────────────────────────────────────────────────────
 if (( REGEN )); then
@@ -43,7 +43,7 @@ if (( REGEN )); then
 
   log "regenerating the Basecamp scaffold from the IDL"
   # --skip-ui preserves our hardened Main.qml; drop it only for a clean regeneration.
-  "$CG" --idl artifacts/multisig-idl.json --out-dir app --target logos-module \
+  "$CG" --idl artifacts/multisig.idl.json --out-dir app --target logos-module \
         --module-name PrivateMultisig --ffi-lib-path lib/libpmsig_ffi.dylib \
     || die "scaffold generation failed"
   info "regenerated — re-apply the manifest and QML hardening before committing"

@@ -450,7 +450,7 @@ eval "$(echo "$PARAMS" | grep '=')"
 info "derivation cross-checked against the wallet's accounts: ok"
 info "config_hash $CONFIG_HASH"
 
-spel_run() { "$SPEL" --idl "$REPO/artifacts/multisig-idl.json" -p "$ART_DIR/multisig.bin" "$@"; }
+spel_run() { "$SPEL" --idl "$REPO/artifacts/multisig.idl.json" -p "$ART_DIR/multisig.bin" "$@"; }
 
 # ─── 9. create → propose ─────────────────────────────────────────────────────────────────────────
 log "creating the 2-of-3 multisig"
@@ -537,7 +537,7 @@ require_free_ram
   log "approval $((i+1)) of 2 — shielded member, anonymous, RISC0_DEV_MODE=$RISC0_DEV_MODE"
   info "this proves a real proof and takes ~20 minutes; it is not hung"
   started=$(date +%s)
-  "$SPEL" --idl "$REPO/artifacts/multisig-idl.json" -p "$ART_DIR/multisig.bin" \
+  "$SPEL" --idl "$REPO/artifacts/multisig.idl.json" -p "$ART_DIR/multisig.bin" \
     --bin-membership "$ART_DIR/membership.bin" -- \
     approve --config-hash "$CONFIG_HASH" --proposal-seed "$PROPOSAL_SEED" \
     --member-root "$MEMBER_ROOT" --claimed-nullifier "$nf" \
