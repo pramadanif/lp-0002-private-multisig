@@ -13,7 +13,8 @@
   built, packaged, installed in Basecamp 0.2.3 and wired to the chain (see `scripts/check-basecamp-contract.sh`); only the `darwin-arm64` variant ships. **The video** is not recorded.
   Everything else is locked with command evidence — see [agent-lock-brief.md](agent-lock-brief.md).
   (Historic: the `e2e-sequencer` job was wired and had not completed; it went green on
-  2026-09-06, run 34052567273, 3 h 41 m.) Each run has failed further along than the last: missing guest toolchain → missing `libpcsclite` → a SIGPIPE panic in our own script (`docs/tried-failed.md`). Every failure so far has been a real defect, and the job fails rather than faking a pass. The build itself is large: a full blockchain node plus a C++ groth16 stack, ~12 min before anything else starts. (#105 eligibility: operator decided 2026-09-04 to proceed through Phase I — `docs/phase-N1-status.md` §3.)
+  2026-09-06, run 34052567273, and again on 2026-09-09 on the current pin — run 34275830322,
+  2 h 54 m, two proofs of 75 min each.) Each run has failed further along than the last: missing guest toolchain → missing `libpcsclite` → a SIGPIPE panic in our own script (`docs/tried-failed.md`). Every failure so far has been a real defect, and the job fails rather than faking a pass. The build itself is large: a full blockchain node plus a C++ groth16 stack, ~12 min before anything else starts. (#105 eligibility: operator decided 2026-09-04 to proceed through Phase I — `docs/phase-N1-status.md` §3.)
 
 - Remote: https://github.com/pramadanif/lp0002 (public)
 

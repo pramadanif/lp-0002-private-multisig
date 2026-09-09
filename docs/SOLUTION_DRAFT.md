@@ -90,7 +90,8 @@ Full reasoning: [ADR-001](adr/ADR-001-architecture.md) and
 | The money moved: treasury 100 → 40, payee 0 → 60 | [evidence/testnet-lifecycle-verified.md](../evidence/testnet-lifecycle-verified.md) |
 | Both approvals are `PrivacyPreserving` transactions, not public ones | `./scripts/verify-onchain.sh` — checks the variant byte of each published transaction |
 | The payee holding the funds is the one *the proposal named* (INV-7) | `verify_onchain` reads the recipient out of the proposal account, never from an argument |
-| Same lifecycle against a standalone sequencer, in CI, `RISC0_DEV_MODE=0` | [run 34052567273](https://github.com/pramadanif/lp0002/actions/runs/34052567273) — 3 h 41 m, green |
+| Same lifecycle against a standalone sequencer, in CI, `RISC0_DEV_MODE=0` | [run 34275830322](https://github.com/pramadanif/lp0002/actions/runs/34275830322) — 2 h 54 m, green: two proofs of 75 min each on a 4-core runner, then execute at full M |
+| The same script, run on a laptop | [evidence/e2e-local-2026-09-09.md](../evidence/e2e-local-2026-09-09.md) — 22 and 21 min per proof |
 | Reproducible guest binaries | `./scripts/build-guests.sh --docker`; the membership ImageID reproduces byte-identically across days and rebuilds |
 | Byte-compatibility with LEZ's own vectors | `crates/membership-core/tests/lez_compat.rs` |
 | Derivation cross-checked against a real wallet account | `crates/sdk/examples/wallet_member.rs` |
