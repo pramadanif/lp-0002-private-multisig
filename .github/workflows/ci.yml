@@ -252,6 +252,9 @@ jobs:
           # Quick Controls ships inside qtdeclarative from Qt 6 on; naming it as a module fails
           # with "packages ['qtquickcontrols2'] were not found while parsing XML".
           version: 6.9.2
+          # Only the replica factory needs this. CMake treats it as optional, so the check still
+          # runs without it — installing it here means the factory is compiled rather than skipped.
+          modules: qtremoteobjects
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       # libpcsclite: the wallet links pcsc-sys. The rest is what a Qt GUI binary needs to start

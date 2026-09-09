@@ -7,7 +7,13 @@ set(CMAKE_AUTOMOC ON)
 
 # Concurrent is deliberately absent: Basecamp does not ship QtConcurrent, and a plugin linking a
 # framework the host lacks cannot be loaded — the module installs and never appears.
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickWidgets RemoteObjects)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickWidgets)
+
+# RemoteObjects is optional. Only the replica factory needs it, and requiring it here broke every
+# build on a plain Qt install — including CI's, which failed with "Failed to find required Qt
+# component RemoteObjects" and took the whole contract check down with it. The module, its QML and
+# the contract check do not depend on it.
+find_package(Qt6 QUIET COMPONENTS RemoteObjects)
 
 # ── FFI shared library (built by build-basecamp.sh / check-basecamp-contract.sh) ──────────────
 # The extension is not hardcoded: the same tree is configured on Linux by CI, where naming a .dylib
@@ -44,14 +50,19 @@ set_target_properties(PrivateMultisigPlugin PROPERTIES OUTPUT_NAME "private_mult
 
 # ── Replica factory (loaded by Basecamp's QML bridge, in the *main* process) ──────────────────
 #
-# Without this, `logos.module("private_multisig")` returns null and every panel is inert while the
-# window renders perfectly. The host finds it by name, beside the plugin. See src/ReplicaFactory.cpp.
-add_library(PrivateMultisigReplicaFactory SHARED src/ReplicaFactory.cpp)
-target_link_libraries(PrivateMultisigReplicaFactory PRIVATE Qt6::Core Qt6::RemoteObjects)
-set_target_properties(PrivateMultisigReplicaFactory PROPERTIES
-    OUTPUT_NAME "private_multisig_replica_factory"
-    PREFIX ""
-)
+# Basecamp reaches a ui_qml module's C++ through this, and without it `logos.module()` returns null
+# and every panel is inert. It is **not packaged yet**: the first build of it crashed Basecamp on
+# opening the module, in the host's own QML url interceptor, and the cause is not yet known — see
+# docs/tried-failed.md. The source and its load test are kept because the investigation is worth
+# more than the dead end. See src/ReplicaFactory.cpp.
+if(Qt6RemoteObjects_FOUND)
+    add_library(PrivateMultisigReplicaFactory SHARED src/ReplicaFactory.cpp)
+    target_link_libraries(PrivateMultisigReplicaFactory PRIVATE Qt6::Core Qt6::RemoteObjects)
+    set_target_properties(PrivateMultisigReplicaFactory PROPERTIES
+        OUTPUT_NAME "private_multisig_replica_factory"
+        PREFIX ""
+    )
+endif()
 
 # ── Standalone preview app ─────────────────────────────────────────────────
 add_executable(PrivateMultisigApp
@@ -88,8 +99,9 @@ target_link_libraries(PrivateMultisigContractTest PRIVATE
 
 # ── Replica factory load test ──────────────────────────────────────────────
 #
-# The first factory crashed Basecamp because it carried an rpath to this machine's Qt, pulling a
-# second QtCore into a process that already had one. This loads it the way the host does and checks
-# that it does not.
-add_executable(PrivateMultisigFactoryTest tests/factory_load_test.cpp)
-target_link_libraries(PrivateMultisigFactoryTest PRIVATE Qt6::Core Qt6::RemoteObjects)
+# Loads the factory the way the host does and checks it brings no second copy of Qt with it. Built
+# only where RemoteObjects is available; see the note above the factory target.
+if(Qt6RemoteObjects_FOUND)
+    add_executable(PrivateMultisigFactoryTest tests/factory_load_test.cpp)
+    target_link_libraries(PrivateMultisigFactoryTest PRIVATE Qt6::Core Qt6::RemoteObjects)
+endif()
