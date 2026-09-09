@@ -102,11 +102,10 @@ account of what it has done.
 **All twenty-one criteria are met.** P-S6 closed last: the video is recorded, human-narrated, and
 linked with timestamps into proof generation and the Basecamp module.
 
-**What is still outstanding is not a criterion.** The public explorer has indexed the two program
-deployments and not the five lifecycle transactions; every one of them answers over JSON-RPC and
-`verify-onchain.sh` reads them all, so the evidence stands, but a reviewer clicking five of the links
-will see a page that has not rendered yet. `check-explorer-links.sh` names them and exits 75 rather
-than passing quietly, and it is re-run on the day the PR opens.
+**Nothing is outstanding.** All seven transactions render on the public explorer — verified
+2026-09-10 by checking each page for its own hash rather than for HTTP 200, which a wiped testnet
+still serves. `check-explorer-links.sh` walks all 35 evidence URLs and exits 0. It is re-run on the
+day the PR opens anyway, because testnets get wiped and a dead link closed a submission before.
 
 P-U2 is met with one host caveat worth stating here rather than leaving to be discovered: the module
 needs `QT_ENABLE_REGEXP_JIT=0` to open, because Basecamp runs a hardened runtime without the JIT

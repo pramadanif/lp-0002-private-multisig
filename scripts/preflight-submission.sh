@@ -344,7 +344,14 @@ fi
 # A pin nobody can check out is worse than no pin: a judge who tries it gets "unknown revision" and
 # has no way to tell a typo from a force-push. Lagging HEAD is fine and expected while work
 # continues — it is reported, not failed, and PF-15 tells the operator to set it before the PR.
-DRAFT_PIN=$(grep -Eo '\*\*Commit / pin:\*\* `[0-9a-f]{7,40}`' docs/SOLUTION_DRAFT.md 2>/dev/null \
+# Two labels, because the packet was reshaped to the form the three accepted solutions use and this
+# gate went red on a file that had not lost its pin — only renamed the bullet. LP-0017, awarded,
+# writes "Branch / commit: `main` @ `<sha>`"; the earlier draft wrote "Commit / pin:". Accept both,
+# and take the long hash wherever it appears on that line, since the winners' form carries a short
+# hash first.
+DRAFT_PIN=$(grep -Eo '\*\*(Commit / pin|Branch / commit):\*\*[^|]*' docs/SOLUTION_DRAFT.md 2>/dev/null \
+            | grep -Eo '[0-9a-f]{40}' | head -1)
+[[ -n "$DRAFT_PIN" ]] || DRAFT_PIN=$(grep -Eo '\*\*(Commit / pin|Branch / commit):\*\*[^|]*' docs/SOLUTION_DRAFT.md 2>/dev/null \
             | grep -Eo '[0-9a-f]{7,40}' | head -1)
 HEAD_SHA=$(git rev-parse HEAD 2>/dev/null || echo 'unknown')
 if [[ -z "$DRAFT_PIN" ]]; then

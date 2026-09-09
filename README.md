@@ -27,7 +27,7 @@ Shot list and narration: [`docs/video-transcript.md`](docs/video-transcript.md).
 | Public testnet lifecycle | **Done** — full 2-of-3 create → propose → 2× anonymous approve (`RISC0_DEV_MODE=0`) → execute. Verified with `./scripts/verify-onchain.sh` from public data alone (INV-7: payee holds 60). |
 | Local / CI demo | **Done** — `./demo.sh` against a standalone LEZ sequencer; CI e2e with real proofs, green twice ([run 34302452494](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34302452494), [run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322)). |
 | Basecamp `.lgx` | **Done (darwin-arm64)** — installs as `ui_qml` under Applications → Blockchain. See [`docs/basecamp-load.md`](docs/basecamp-load.md). Approve stays in CLI/SDK (module does not submit PPE approvals). |
-| Explorer index | **Pending** — txs are on the sequencer; some explorer pages still WAIT. Re-run `./scripts/check-explorer-links.sh` before opening a solution PR. |
+| Explorer index | **Done** — all seven transactions render; `./scripts/check-explorer-links.sh` walks 35 evidence URLs and exits 0 (2026-09-10). Re-run it before opening a solution PR: testnets get wiped. |
 | Narrated video | **Done** — [https://youtu.be/7gRweVxWEL4](https://youtu.be/7gRweVxWEL4), recorded at `138c683`. |
 
 Per-criterion map: [`docs/criteria-checklist.md`](docs/criteria-checklist.md).  

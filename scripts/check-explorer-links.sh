@@ -86,6 +86,7 @@ else
   echo "        chain right now, so an unindexed one cannot be told from a missing one."
 fi
 
+checker_bug=0
 fail=0
 for url in "${urls[@]}"; do
   # A JSON-RPC endpoint is not a web page. It answers POST and refuses GET with 405, which is the
@@ -104,12 +105,38 @@ for url in "${urls[@]}"; do
     printf '  OK   %s  (JSON-RPC, answers checkHealth)\n' "$url"
     continue
   fi
-  code=$(curl -s -o /tmp/explorer-body.$$ -w '%{http_code}' -L --max-time 25 "$url" || echo 000)
+  # `|| echo 000` INSIDE the substitution appends to whatever curl already printed: a request that
+  # emitted "200" and then failed late — a timeout while reading the body, a write error — captured
+  # as "200000", which is not a status code and was reported as a dead link. It said "re-deploy
+  # before submitting" about a URL that answers 200 on every retry, and acting on that would have
+  # invalidated a video already recorded against those transactions. The `||` belongs outside.
+  code=$(curl -s -o /tmp/explorer-body.$$ -w '%{http_code}' -L --max-time 25 "$url") || code=000
+  # A status that is not three digits is this script being wrong, not the URL being dead. Say so,
+  # rather than blaming the evidence.
+  if [[ ! "$code" =~ ^[0-9]{3}$ ]]; then
+    printf '  BUG  %s\n       check-explorer-links.sh produced %s, which is not an HTTP status.\n' "$url" "$code" >&2
+    rm -f /tmp/explorer-body.$$
+    checker_bug=1
+    continue
+  fi
+  # Does the page actually show the thing it was asked for? For a transaction page the honest test
+  # is whether the body contains that transaction's own hash — the explorer server-renders it into
+  # "Hash: <...>" before the WASM bundle hydrates.
+  #
+  # The previous test grepped the body for 'not found|no such transaction|does not exist|null' and
+  # the bare `null` was the mistake: every page carries the word somewhere in its JavaScript, so
+  # pages that were rendering perfectly well were reported as not indexed. Five transactions sat in
+  # PF-09 as "the explorer has not indexed them yet" while all five were live, and the submission
+  # was held back on a gate that had already cleared. Checked by hand against all seven: each page
+  # contains its own hash, three of them served in under 6 KB.
   body_says_missing=0
-  if grep -qiE 'not found|no such transaction|does not exist|null' /tmp/explorer-body.$$ 2>/dev/null; then
-    # Only treat this as fatal for transaction/account pages, where an empty result is the failure
-    # mode that matters (a wiped testnet still serves a 200 page).
-    [[ "$url" == *"/transaction/"* || "$url" == *"/account/"* ]] && body_says_missing=1
+  if [[ "$url" == *"/transaction/"* || "$url" == *"/account/"* ]]; then
+    want=${url##*/}
+    if ! grep -qF -- "$want" /tmp/explorer-body.$$ 2>/dev/null; then
+      body_says_missing=1
+    elif grep -qiE 'not found|no such transaction|does not exist' /tmp/explorer-body.$$ 2>/dev/null; then
+      body_says_missing=1
+    fi
   fi
   rm -f /tmp/explorer-body.$$
 
@@ -134,6 +161,15 @@ for url in "${urls[@]}"; do
 done
 
 echo
+if (( checker_bug )); then
+  # Distinct from a dead link on purpose. This script telling the operator to re-deploy is expensive
+  # advice — it invalidates every transaction a recorded video points at — so when the fault is in
+  # here, say that instead of blaming the evidence.
+  echo "FAILED: this script produced a value that is not an HTTP status." >&2
+  echo "That is a defect in check-explorer-links.sh, not evidence that a link is dead." >&2
+  echo "Do NOT re-deploy on the strength of this run. Fix the checker and run it again." >&2
+  exit 2
+fi
 if (( fail )); then
   echo "FAILED: at least one evidence URL does not resolve." >&2
   echo "Re-deploy and update docs/DEPLOYMENT.md before submitting (SC-G.12)." >&2

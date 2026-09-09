@@ -33,8 +33,8 @@ The precise on-chain claim, stated so a reviewer can check it rather than take i
   PDA seed. Lowering M, substituting the member set, or naming a permissive verifier does not weaken
   the multisig — it names one that does not exist.
 
-**Outstanding, and not glossed:** the public explorer has indexed the two program deployments but
-not yet the five lifecycle transactions. See [What is not done](#what-is-not-done).
+**All seven transactions render on the public explorer**, checked on 2026-09-10: each page carries
+its own hash. `./scripts/check-explorer-links.sh` walks all 35 evidence URLs and exits 0.
 
 ## Demo Video
 
@@ -54,10 +54,11 @@ The shot list and narration are in
 ## Repository
 
 - **Repo:** <https://github.com/pramadanif/lp-0002-private-multisig>
-- **Commit / pin:** `138c683bb4b57f8e600a6ff3e43bb95d036a94b5` — **this is the commit shown on camera**. `demo.sh` and
-  `verify-onchain.sh` both print the short hash `138c683` in their banners, so the video and this
-  file name the same commit. Later commits on `main` are documentation only; `git checkout 138c683`
-  reproduces exactly what the recording shows.
+- **Branch / commit:** `main` @ [`138c683`](https://github.com/pramadanif/lp-0002-private-multisig/tree/138c683bb4b57f8e600a6ff3e43bb95d036a94b5)
+  (`138c683bb4b57f8e600a6ff3e43bb95d036a94b5`) — the commit shown on camera. `demo.sh` and
+  `verify-onchain.sh` each print that short hash in their own banner, so the recording and this file
+  name the same commit and it can be checked rather than taken on trust. Later commits on `main` are
+  documentation; `git checkout 138c683` reproduces exactly what the video shows.
 - **Licence:** MIT OR Apache-2.0
 - **Narrated demo video:** <https://youtu.be/7gRweVxWEL4>
 - **Per-criterion map:**
@@ -113,10 +114,12 @@ Redeployed **2026-09-08** after a testnet reset wiped the previous deployment; r
 | Threshold | **2-of-3 — full M**, not a lowered tier |
 | Balances | treasury 100 → 40, payee 0 → 60 |
 
-**Explorer index, honestly:** the two program deployments render; the five lifecycle transactions are
-on chain and answer over JSON-RPC, but the explorer has not indexed them yet.
-`./scripts/check-explorer-links.sh` reports exactly which and exits 75 rather than passing quietly.
-The evidence does not depend on the explorer — `verify-onchain.sh` reads the accounts directly:
+**Explorer index:** all seven render. `./scripts/check-explorer-links.sh` checks each transaction
+page for its own hash — not merely for HTTP 200, which a wiped testnet still serves — and walks the
+other evidence URLs too: 35 of 35 resolve, exit 0, on 2026-09-10.
+
+The evidence does not depend on the explorer, and that is the stronger claim:
+`verify-onchain.sh` reads the accounts directly and needs no indexer at all:
 
 ```
 $ ./scripts/verify-onchain.sh
@@ -212,13 +215,59 @@ needs shielded accounts whose repeated use is unlinkable, and execution that can
 chain never sees. LEZ provides both in the base layer; on a chain where validators must see the
 inputs, it is not possible at all.
 
+### What I tried that did not work
+
+Recorded in full in [`docs/tried-failed.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/tried-failed.md); the two worth stating here
+are the same mistake made twice.
+
+**A member's spending key, shipped in the guest journal.** The membership guest emitted the journal
+with `nsk` recoverable from it. The first test for this scanned the journal for the key's raw bytes
+and passed — a false negative, because risc0 word-encodes each byte, so the bytes are never
+contiguous. Decoding the journal instead showed the key sitting in it. Fixed, and the test decodes
+now rather than scanning.
+
+**The same key, in a run log.** The SPEL CLI echoes the arguments it was given, and one of them is
+the approval's `ApprovalWitness` — first field `nsk`. Both scripts redact it now, and preflight
+**PF-16** fails the submission if any tracked file carries one. It caught its own author quoting a
+real key while writing that up. A later drill found PF-16 still missed the shape a human writes by
+hand, `--witness {"nsk":"<64 hex>"}`, because the pattern required a `0x` only the CLI emits; the
+gate was widened and [`scripts/check-gates-fire.sh`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/scripts/check-gates-fire.sh) now plants
+seven violations and fails if any goes undetected.
+
+**Five theories about a Basecamp crash, all wrong.** The module crashed the host on startup inside
+Basecamp's own QML url interceptor. Five explanations were stated, each given a measurement that
+could refute it, and all five were refuted. Both real causes were found elsewhere: Basecamp's
+hardened runtime lacks the JIT entitlement its QML sandbox uses (filed in
+[`docs/BUGS_FILED.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/BUGS_FILED.md) §8), and our own factory interface was missing its
+virtual destructor, which the load test could not see because it kept a private copy of the same
+wrong declaration.
+
+### What this does not do
+
+The difference between built and demonstrated is what this prize's gates test, so the gaps are
+stated here rather than left to be found.
+
+- **The Basecamp module ships one platform variant**, `darwin-arm64` — the machine it was built on.
+  Nothing in it is macOS-specific; no second machine was available to build and test the others, and
+  shipping an untested variant is worse than shipping none.
+- **Basecamp needs `QT_ENABLE_REGEXP_JIT=0`** to open the module at all. That is the host's bug, not
+  a defect in this module — but it is a step a reviewer has to take.
+- **Approvals cannot be submitted from the GUI.** By design, and said on the page: the witness is a
+  spending key and the module builds public transactions. A CI check fails the build if anyone
+  reconnects it.
+- **SPEL is pinned to `main`, not the v0.6.0 release**, because the release pins LEZ v0.2.0 and
+  derives private account ids this testnet does not recognise. An unreleased dependency is a real
+  cost, taken deliberately and recorded.
+- **Unaudited**, and the member set is fixed at creation. Full list in
+  [`docs/limitations.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/limitations.md).
+
 ## Success Criteria Checklist
 
 All 21 criteria from the prize. Statuses match
 [`docs/criteria-checklist.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/criteria-checklist.md),
 which carries the full evidence for each.
 
-**Functionality**
+### Functionality
 
 - [x] **P-F1** Shielded member approves without revealing identity — two privacy-preserving approvals
       on chain (txs 5 and 6 above); `crates/sdk/tests/peer_privacy.rs` shows `prepare_approval` has no
@@ -237,7 +286,7 @@ which carries the full evidence for each.
 - [x] **P-F8** Full documentation and a clean public repository — 128 tests, ADRs, security model,
       error codes, limitations, `BUGS_FILED.md`, and a documentation index in the README
 
-**Usability**
+### Usability
 
 - [x] **P-U1** Module/SDK for building Logos modules — `pmsig-sdk`, `pmsig-core`, `pmsig-store`,
       `pmsig-cli`; the integration guide's code is a compiled example
@@ -247,19 +296,19 @@ which carries the full evidence for each.
 - [x] **P-U3** IDL for the LEZ program, using SPEL — `artifacts/multisig-idl.json`, generated from
       `#[lez_program]` at compile time; the SPEL CLI built working commands from it
 
-**Reliability**
+### Reliability
 
 - [x] **P-R1** Proof failures handled gracefully with a clear error to the member
 - [x] **P-R2** Partial approvals (< M) preserved and resumable across client restarts
 - [x] **P-R3** Deterministic, documented error codes for invalid-proof and double-vote cases
 
-**Performance**
+### Performance
 
 - [x] **P-P1** CU cost of each on-chain operation documented, numerically —
       [`docs/cu-costs.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/cu-costs.md) for all
       four instructions
 
-**Supportability**
+### Supportability
 
 - [x] **P-S1** Deployed and tested on LEZ testnet — see the deployment table
 - [x] **P-S2** E2E tests against a **standalone** LEZ sequencer in CI — [run 34302452494](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34302452494),
@@ -336,39 +385,8 @@ for the upstream papercuts. Every claim in this file has a script behind it that
 `RISC0_DEV_MODE=0`. `demo-fast.sh` is a development tour, generates no proof, and is **not** cited as
 evidence anywhere.
 
-## What is not done
-
-Listed first-class, because the difference between built and demonstrated is what this prize's gates
-test.
-
-- **The public explorer has not indexed all of the evidence.** Every transaction answers over
-  JSON-RPC and `verify-onchain.sh` reads them all; the explorer renders the two program deployments
-  but not yet the five lifecycle transactions. `check-explorer-links.sh` says which, and exits 75.
-- **The Basecamp module ships one platform variant**, `darwin-arm64` — the machine it was built on.
-  Nothing in it is macOS-specific; no second machine was available to build and test the others, and
-  shipping an untested variant is worse than shipping none.
-- **Basecamp needs `QT_ENABLE_REGEXP_JIT=0`** to open the module at all. That is the host's bug,
-  reproduced and filed, not a defect in this module — but it is a step a reviewer has to take.
-- **Approvals cannot be submitted from the GUI.** By design, and explained on the page: the witness is
-  a spending key and the module builds public transactions.
-
-Full list:
-[`docs/limitations.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/limitations.md).
-
-## Honest notes
-
-- SPEL is pinned to `main`, not the v0.6.0 release, because the release pins LEZ v0.2.0 and derives
-  private account ids the live testnet does not recognise. An unreleased dependency is a real cost; it
-  is taken deliberately and recorded.
-- Things we got wrong and fixed are in
-  [`docs/tried-failed.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/tried-failed.md),
-  including a leak of the member's spending key into the guest journal that we shipped, then caught by
-  decoding the journal rather than trusting a byte scan — and a second instance of the same class,
-  where the same key was found sitting in a run log.
-
 ## Terms & Conditions
 
-By submitting this solution I confirm that I have read and accept the λPrize
-[Terms & Conditions](https://github.com/logos-co/lambda-prize/blob/master/TERMS.md), that the work is
-my own original work created for this prize, and that the repository is public under
-**MIT OR Apache-2.0**. Eligibility determinations rest with the organisers.
+By submitting this solution, I confirm that I have read and agree to the
+[Terms & Conditions](https://github.com/logos-co/lambda-prize/blob/master/TERMS.md). The work is my
+own original work created for this prize, and the repository is public under **MIT OR Apache-2.0**.

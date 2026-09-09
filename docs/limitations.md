@@ -228,11 +228,12 @@ and is not any more; the entries are kept rather than deleted so the record show
 
 What is genuinely still open:
 
-- **The public explorer's index.** Every evidence URL answers over JSON-RPC. Of the 27 the checker
-  reads, 22 resolve in a browser; of the seven lifecycle transactions the explorer has indexed the
-  two program deployments and not the other five. `./scripts/check-explorer-links.sh` reports which,
-  and exits 75 rather than passing quietly. Measured 2026-09-09 — re-run it on the day the PR opens,
-  because the number moves on its own as the indexer catches up.
+- **The public explorer's index** — resolved. All 35 evidence URLs resolve and all seven
+  transactions render, measured 2026-09-10. This sat as an open gap for a day on the strength of a
+  checker that was wrong: it grepped each page for the word `null`, which every page carries in its
+  JavaScript, so pages that were rendering fine were reported as unindexed. The check now looks for
+  the transaction's own hash in the body. Re-run `./scripts/check-explorer-links.sh` on the day the
+  PR opens regardless — testnets get wiped, and a dead link has closed a submission for this prize.
 - **One platform variant.** The Basecamp package carries `darwin-arm64` only — the machine it was
   built on. Nothing in the module is macOS-specific; no second machine was available to build and
   test the others, and shipping an untested variant is worse than shipping none.

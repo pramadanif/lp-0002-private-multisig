@@ -12,8 +12,7 @@
   not finished indexing five of the lifecycle transactions.
 - Blockers: the testnet reset on 2026-09-08 is **handled** — redeployed the same day, and
   `verify-onchain.sh` re-read the whole lifecycle from public data on 2026-09-09 (exit 0).
-  Outstanding: the public explorer has indexed the two program deployments but not yet the five
-  lifecycle transactions (`check-explorer-links.sh` exits 75). **The Basecamp module** is
+  The public explorer renders all seven transactions (`check-explorer-links.sh` exits 0, 2026-09-10). **The Basecamp module** is
   built, packaged, installed in Basecamp 0.2.3 and wired to the chain (see `scripts/check-basecamp-contract.sh`); only the `darwin-arm64` variant ships. **The video** is recorded and published — <https://youtu.be/7gRweVxWEL4>, at commit `138c683`.
   Everything else is locked with command evidence — see
   [criteria-checklist.md](criteria-checklist.md), which carries the evidence per criterion.
