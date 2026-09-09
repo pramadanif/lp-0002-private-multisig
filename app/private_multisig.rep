@@ -1,0 +1,62 @@
+// The remote interface Basecamp replicates, in QtRemoteObjects' own .rep language.
+//
+// Why this file exists rather than a dynamic replica: both modules that work inside Basecamp — its
+// own package_manager_ui and the official logos_delivery_demo — are built this way. `repc` turns
+// this into a *source* base class the plugin inherits and a *replica* class the factory hands to the
+// QML, and the two are generated from the same text, so their APIs cannot disagree. Our first
+// attempt acquired a dynamic replica instead, and Basecamp died on opening the module.
+//
+// Order matters. QtRemoteObjects matches a source and a replica by a signature computed over this
+// list, so reordering it silently breaks the pairing at runtime rather than at build time.
+class PrivateMultisig
+{
+    // ── Fetched state ────────────────────────────────────────────────────
+    PROP(QVariantMap config READONLY)
+    PROP(QVariantMap proposal READONLY)
+    // Keyed by what was being fetched, so a panel shows only its own failure.
+    PROP(QVariantMap fetchErrors READONLY)
+
+    // ── Async status ─────────────────────────────────────────────────────
+    PROP(bool busy READONLY)
+    PROP(QString lastError READONLY)
+    PROP(QString lastTxHash READONLY)
+    PROP(QVariantMap lastResult READONLY)
+
+    // ── Configuration ────────────────────────────────────────────────────
+    // Read-only here and written through the slots below: a QtRemoteObjects
+    // writable property replicates as push<Name>(), and the QML already calls
+    // the setters by name.
+    PROP(QString walletPath READONLY)
+    PROP(QString sequencerUrl READONLY)
+    PROP(QString programIdHex READONLY)
+    PROP(QString walletCliDir READONLY)
+
+    // ── Wallet state ─────────────────────────────────────────────────────
+    PROP(QString connectionStatus READONLY)
+    PROP(QVariantList walletAccounts READONLY)
+    PROP(QVariantMap walletAccountInfo READONLY)
+    PROP(QVariantMap walletDecodedAccount READONLY)
+
+    SIGNAL(operationSuccess(QString operation, QString txHash))
+    SIGNAL(operationError(QString operation, QString error))
+
+    SLOT(void setWalletPath(QString v))
+    SLOT(void setSequencerUrl(QString v))
+    SLOT(void setProgramIdHex(QString v))
+    SLOT(void setWalletCliDir(QString v))
+
+    SLOT(void createMultisig(QString creatorId, QString configHash, QString memberRoot, quint32 m, quint32 n, QString multisigId, QVariantList membershipProgramId))
+    SLOT(void createProposal(QString proposerId, QString configHash, QString proposalSeed, QString proposalId, QString recipient, QString amount))
+    SLOT(void approve(QString configHash, QString proposalSeed, QString memberRoot, QString claimedNullifier, QVariantList witness))
+    SLOT(void execute(QString configHash, QString proposalSeed))
+
+    SLOT(void fetchConfig(QString configHash))
+    SLOT(void fetchProposal(QString proposalSeed))
+
+    SLOT(void checkConnection())
+    SLOT(void listAccounts())
+    SLOT(void createAccount(QString label))
+    SLOT(void inspectAccount(QString accountId))
+    SLOT(void decodeAccount(QString accountId))
+    SLOT(void saveHistory(QString key, QString value))
+}

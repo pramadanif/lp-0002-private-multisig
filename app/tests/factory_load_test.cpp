@@ -16,18 +16,17 @@
 #include <QDebug>
 #include <QObject>
 #include <QPluginLoader>
+#include <QElapsedTimer>
 #include <QRegularExpression>
+#include <QRemoteObjectHost>
+
+#include "../src/LogosViewReplicaFactory.h"
 #include <QRemoteObjectNode>
 #include <mach-o/dyld.h>
 #include <cstring>
 
-class LogosViewReplicaFactory {
-public:
-    virtual QObject*           acquire(QRemoteObjectNode* node) = 0;
-    virtual const QMetaObject* replicaMetaObject() const        = 0;
-};
-#define LogosViewReplicaFactory_iid "logos.view.replica_factory/1.0"
-Q_DECLARE_INTERFACE(LogosViewReplicaFactory, LogosViewReplicaFactory_iid)
+// One declaration, shared with the factory: this file had its own copy, and when the factory
+// gained the virtual destructor this one did not, so the test crashed exactly the way Basecamp had.
 
 static int failures = 0;
 static void check(bool ok, const QString& what) {
@@ -46,6 +45,9 @@ static int countLoaded(const char* needle) {
 }
 
 int main(int argc, char** argv) {
+    // The round-trip below calls setSequencerUrl, which the backend *persists*. Without this the
+    // test would overwrite the operator's real setting with its own probe value — it did once.
+    qputenv("PMSIG_SETTINGS_APP", QByteArrayLiteral("private_multisig_factory_test"));
     QCoreApplication app(argc, argv);
     if (argc < 2) {
         qCritical("usage: factory_load_test <private_multisig_replica_factory.dylib>");
@@ -96,6 +98,64 @@ int main(int argc, char** argv) {
     check(matched, QStringLiteral("a JIT-compiled regex still runs with the plugin loaded"));
 
     delete replica;
+
+    // ── The pairing itself ──────────────────────────────────────────────────────────────────────
+    //
+    // Everything above proves the plugin loads. This proves the half that actually fails silently:
+    // QtRemoteObjects pairs a source and a replica by a signature computed over the .rep, and a
+    // mismatch does not error at build time — the replica simply never initialises, and in Basecamp
+    // that looks exactly like a module whose panels do nothing. Publishing the real plugin here and
+    // acquiring through the real factory is the only way to see it.
+    if (argc >= 3) {
+        QPluginLoader pluginLoader(QString::fromLocal8Bit(argv[2]));
+        QObject* source = pluginLoader.instance();
+        check(source != nullptr,
+              QStringLiteral("the module plugin loads (%1)").arg(pluginLoader.errorString()));
+        if (source) {
+            // `ui-host` publishes it under the module's name, not the class's.
+            QRemoteObjectHost host(QUrl(QStringLiteral("local:pmsig_pair_test")));
+            check(host.enableRemoting(source, QStringLiteral("private_multisig")),
+                  QStringLiteral("the plugin can be published as \"private_multisig\""));
+
+            QRemoteObjectNode client;
+            client.connectToNode(QUrl(QStringLiteral("local:pmsig_pair_test")));
+            QObject* paired = factory->acquire(&client);
+            check(paired != nullptr, QStringLiteral("the factory acquires a replica of it"));
+
+            auto* rep = qobject_cast<QRemoteObjectReplica*>(paired);
+            check(rep != nullptr, QStringLiteral("what it returns is a QtRemoteObjects replica"));
+            if (rep) {
+                QElapsedTimer clock;
+                clock.start();
+                while (!rep->isInitialized() && clock.elapsed() < 10000)
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                check(rep->isInitialized(),
+                      QStringLiteral("source and replica pair (signatures match)"));
+            }
+            if (paired && paired->metaObject()->indexOfProperty("sequencerUrl") >= 0) {
+                check(true, QStringLiteral("the replica exposes the module's properties"));
+                // A slot call has to travel to the source and the new value come back, which is the
+                // whole round trip a button press makes.
+                QMetaObject::invokeMethod(paired, "setSequencerUrl",
+                                          Q_ARG(QString, QStringLiteral("https://pair.test")));
+                QElapsedTimer clock;
+                clock.start();
+                QString seen;
+                while (clock.elapsed() < 10000) {
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                    seen = paired->property("sequencerUrl").toString();
+                    if (seen == QLatin1String("https://pair.test")) break;
+                }
+                check(seen == QLatin1String("https://pair.test"),
+                      QStringLiteral("a slot called on the replica reaches the plugin and the new "
+                                     "value comes back (saw \"%1\")").arg(seen));
+            } else {
+                check(false, QStringLiteral("the replica exposes the module's properties"));
+            }
+            delete paired;
+        }
+    }
+
     qInfo().noquote() << (failures == 0 ? "factory is loadable" : "FACTORY BROKEN");
     return failures == 0 ? 0 : 1;
 }

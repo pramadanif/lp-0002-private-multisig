@@ -184,6 +184,38 @@ if [[ -n "$leftover" ]]; then
   die "the plugin still names build-machine paths, so it will not load elsewhere:
 $(printf '       %s\n' $leftover)"
 fi
+# ── The replica factory ─────────────────────────────────────────────────────────────────────────
+#
+# Basecamp reaches a ui_qml module's C++ through a second plugin loaded beside the first, named for
+# the module: `logos.module()` returns null without it and every panel is inert. Its Qt paths get the
+# same treatment, and its rpath is emptied outright — this one is loaded into Basecamp's *own*
+# process, and an rpath naming a Qt on the build machine is the last thing that belongs there.
+FACTORY_BUILT="app/build/private_multisig_replica_factory.$LIBEXT"
+[[ -f "$FACTORY_BUILT" ]] || die "$FACTORY_BUILT not found after the build — Qt RemoteObjects missing?"
+
+while read -r rp; do
+  install_name_tool -delete_rpath "$rp" "$FACTORY_BUILT" 2>/dev/null || true
+done < <(otool -l "$FACTORY_BUILT" | awk '/LC_RPATH/{f=1} f&&/path /{print $2; f=0}')
+
+while read -r dep; do
+  case "$dep" in
+    /opt/homebrew/*Qt*.framework/*)
+      fw=${dep##*/}
+      install_name_tool -change "$dep" "@rpath/$fw.framework/Versions/A/$fw" "$FACTORY_BUILT" \
+        || die "could not repoint $fw in the replica factory"
+      ;;
+  esac
+done < <(otool -L "$FACTORY_BUILT" | tail -n +2 | awk '{print $1}')
+
+factory_leftover=$(otool -L "$FACTORY_BUILT" | tail -n +2 | awk '{print $1}' \
+  | grep -E '^/opt/homebrew|^'"$PWD" || true)
+factory_rpath=$(otool -l "$FACTORY_BUILT" | awk '/LC_RPATH/{f=1} f&&/path /{print $2; f=0}' \
+  | grep -v '^@' || true)
+if [[ -n "$factory_leftover$factory_rpath" ]]; then
+  die "the replica factory still names build-machine paths, and it loads inside Basecamp itself:
+$(printf '       %s\n' $factory_leftover $factory_rpath)"
+fi
+
 info "library paths rewritten; no build-machine paths remain"
 
 # ─── 4. Package the .lgx ────────────────────────────────────────────────────────────────────────
@@ -218,6 +250,9 @@ cp app/qml/qmldir app/.lgx-staging/qml/
 # Without this the package loads and then fails on the first call into the program.
 cp "app/lib/libpmsig_ffi.$LIBEXT" app/.lgx-staging/ \
   || die "the FFI library is not in app/lib — the earlier stage did not run"
+# Found by name, beside the plugin — the convention Basecamp's own modules follow.
+cp "$FACTORY_BUILT" "app/.lgx-staging/private_multisig_replica_factory.$LIBEXT" \
+  || die "the replica factory did not build; without it every panel is inert"
 [[ -s app/assets/icon.png ]] || die "app/assets/icon.png is missing"
 cp app/assets/icon.png app/.lgx-staging/icon.png
 [[ -s app/metadata.json ]] || die "app/metadata.json is missing"

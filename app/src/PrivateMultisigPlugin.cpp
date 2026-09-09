@@ -1,4 +1,4 @@
-// See PrivateMultisigPlugin.h for why this class mirrors the backend's API.
+// See PrivateMultisigPlugin.h for why this class inherits a repc-generated source.
 #include "PrivateMultisigPlugin.h"
 #include "PrivateMultisigBackend.h"
 
@@ -8,7 +8,8 @@
 #include <QUrl>
 #include <cstdlib>
 
-PrivateMultisigPlugin::PrivateMultisigPlugin(QObject* parent) : QObject(parent) {}
+PrivateMultisigPlugin::PrivateMultisigPlugin(QObject* parent)
+    : PrivateMultisigSimpleSource(parent) {}
 PrivateMultisigPlugin::~PrivateMultisigPlugin() = default;
 
 void PrivateMultisigPlugin::initLogos(LogosAPI* api) {
@@ -26,34 +27,45 @@ PrivateMultisigBackend* PrivateMultisigPlugin::backend() const {
 	m_backend  = new PrivateMultisigBackend(m_api, self);
 
 	using B = PrivateMultisigBackend;
-	using P = PrivateMultisigPlugin;
-	connect(m_backend, &B::configChanged,               self, &P::configChanged);
-	connect(m_backend, &B::proposalChanged,             self, &P::proposalChanged);
-	connect(m_backend, &B::fetchErrorsChanged,          self, &P::fetchErrorsChanged);
-	connect(m_backend, &B::busyChanged,                 self, &P::busyChanged);
-	connect(m_backend, &B::lastErrorChanged,            self, &P::lastErrorChanged);
-	connect(m_backend, &B::lastTxHashChanged,           self, &P::lastTxHashChanged);
-	connect(m_backend, &B::lastResultChanged,           self, &P::lastResultChanged);
-	connect(m_backend, &B::walletPathChanged,           self, &P::walletPathChanged);
-	connect(m_backend, &B::sequencerUrlChanged,         self, &P::sequencerUrlChanged);
-	connect(m_backend, &B::programIdHexChanged,         self, &P::programIdHexChanged);
-	connect(m_backend, &B::walletCliDirChanged,         self, &P::walletCliDirChanged);
-	connect(m_backend, &B::connectionStatusChanged,     self, &P::connectionStatusChanged);
-	connect(m_backend, &B::walletAccountsChanged,       self, &P::walletAccountsChanged);
-	connect(m_backend, &B::walletAccountInfoChanged,    self, &P::walletAccountInfoChanged);
-	connect(m_backend, &B::walletDecodedAccountChanged, self, &P::walletDecodedAccountChanged);
-	connect(m_backend, &B::operationSuccess,            self, &P::operationSuccess);
-	connect(m_backend, &B::operationError,              self, &P::operationError);
+	// Each of the backend's notifications pushes the new value into the generated source, which is
+	// what emits the replicated `…Changed(value)` signal. The backend's own signals carry no
+	// argument, so the value is read back here rather than forwarded.
+	connect(m_backend, &B::configChanged,               self, [self] { self->PrivateMultisigSimpleSource::setConfig(self->m_backend->config()); });
+	connect(m_backend, &B::proposalChanged,             self, [self] { self->PrivateMultisigSimpleSource::setProposal(self->m_backend->proposal()); });
+	connect(m_backend, &B::fetchErrorsChanged,          self, [self] { self->PrivateMultisigSimpleSource::setFetchErrors(self->m_backend->fetchErrors()); });
+	connect(m_backend, &B::busyChanged,                 self, [self] { self->PrivateMultisigSimpleSource::setBusy(self->m_backend->busy()); });
+	connect(m_backend, &B::lastErrorChanged,            self, [self] { self->PrivateMultisigSimpleSource::setLastError(self->m_backend->lastError()); });
+	connect(m_backend, &B::lastTxHashChanged,           self, [self] { self->PrivateMultisigSimpleSource::setLastTxHash(self->m_backend->lastTxHash()); });
+	connect(m_backend, &B::lastResultChanged,           self, [self] { self->PrivateMultisigSimpleSource::setLastResult(self->m_backend->lastResult()); });
+	connect(m_backend, &B::walletPathChanged,           self, [self] { self->PrivateMultisigSimpleSource::setWalletPath(self->m_backend->walletPath()); });
+	connect(m_backend, &B::sequencerUrlChanged,         self, [self] { self->PrivateMultisigSimpleSource::setSequencerUrl(self->m_backend->sequencerUrl()); });
+	connect(m_backend, &B::programIdHexChanged,         self, [self] { self->PrivateMultisigSimpleSource::setProgramIdHex(self->m_backend->programIdHex()); });
+	connect(m_backend, &B::walletCliDirChanged,         self, [self] { self->PrivateMultisigSimpleSource::setWalletCliDir(self->m_backend->walletCliDir()); });
+	connect(m_backend, &B::connectionStatusChanged,     self, [self] { self->PrivateMultisigSimpleSource::setConnectionStatus(self->m_backend->connectionStatus()); });
+	connect(m_backend, &B::walletAccountsChanged,       self, [self] { self->PrivateMultisigSimpleSource::setWalletAccounts(self->m_backend->walletAccounts()); });
+	connect(m_backend, &B::walletAccountInfoChanged,    self, [self] { self->PrivateMultisigSimpleSource::setWalletAccountInfo(self->m_backend->walletAccountInfo()); });
+	connect(m_backend, &B::walletDecodedAccountChanged, self, [self] { self->PrivateMultisigSimpleSource::setWalletDecodedAccount(self->m_backend->walletDecodedAccount()); });
+	connect(m_backend, &B::operationSuccess,            self, &PrivateMultisigPlugin::operationSuccess);
+	connect(m_backend, &B::operationError,              self, &PrivateMultisigPlugin::operationError);
+
+	// The settings the backend restored are already meaningful; publish them before anyone asks.
+	// Through `self`, because this accessor is const and the generated setters are not.
+	self->PrivateMultisigSimpleSource::setWalletPath(m_backend->walletPath());
+	self->PrivateMultisigSimpleSource::setSequencerUrl(m_backend->sequencerUrl());
+	self->PrivateMultisigSimpleSource::setProgramIdHex(m_backend->programIdHex());
+	self->PrivateMultisigSimpleSource::setWalletCliDir(m_backend->walletCliDir());
 	return m_backend;
 }
 
 QWidget* PrivateMultisigPlugin::createWidget(LogosAPI* api) {
 	if (api) m_api = api;
+	(void)backend();
 	auto* view = new QQuickWidget();
 	// Only the in-process path reaches this. `ctxBackend`, not `backend`: Main.qml declares its own
 	// `backend` property that prefers this and falls back to logos.module(), and a context property
-	// of the same name would be shadowed by it.
-	view->engine()->rootContext()->setContextProperty("ctxBackend", backend());
+	// of the same name would be shadowed by it. The object is this plugin either way — in Basecamp
+	// the QML sees a replica of it instead.
+	view->engine()->rootContext()->setContextProperty("ctxBackend", this);
 	view->setResizeMode(QQuickWidget::SizeRootObjectToView);
 	const char* qmlPath = std::getenv("QML_PATH");
 	if (qmlPath) {
@@ -72,51 +84,35 @@ void PrivateMultisigPlugin::destroyWidget(QWidget* widget) {
 	delete widget;
 }
 
-// ── Property reads ──────────────────────────────────────────────────────────────────────────────
-
-QVariantMap  PrivateMultisigPlugin::config() const { return backend()->config(); }
-QVariantMap  PrivateMultisigPlugin::proposal() const { return backend()->proposal(); }
-QVariantMap  PrivateMultisigPlugin::fetchErrors() const { return backend()->fetchErrors(); }
-bool         PrivateMultisigPlugin::busy() const { return backend()->busy(); }
-QString      PrivateMultisigPlugin::lastError() const { return backend()->lastError(); }
-QString      PrivateMultisigPlugin::lastTxHash() const { return backend()->lastTxHash(); }
-QVariantMap  PrivateMultisigPlugin::lastResult() const { return backend()->lastResult(); }
-QString      PrivateMultisigPlugin::walletPath() const { return backend()->walletPath(); }
-QString      PrivateMultisigPlugin::sequencerUrl() const { return backend()->sequencerUrl(); }
-QString      PrivateMultisigPlugin::programIdHex() const { return backend()->programIdHex(); }
-QString      PrivateMultisigPlugin::walletCliDir() const { return backend()->walletCliDir(); }
-QString      PrivateMultisigPlugin::connectionStatus() const { return backend()->connectionStatus(); }
-QVariantList PrivateMultisigPlugin::walletAccounts() const { return backend()->walletAccounts(); }
-QVariantMap  PrivateMultisigPlugin::walletAccountInfo() const { return backend()->walletAccountInfo(); }
-QVariantMap  PrivateMultisigPlugin::walletDecodedAccount() const { return backend()->walletDecodedAccount(); }
-
 // ── Slots ───────────────────────────────────────────────────────────────────────────────────────
+//
+// These four are also the generated property setters. Routing them through the backend is what
+// makes a write from the UI persist; the backend's change signal then publishes the new value.
 
-void PrivateMultisigPlugin::setWalletPath(const QString& v) { backend()->setWalletPath(v); }
-void PrivateMultisigPlugin::setSequencerUrl(const QString& v) { backend()->setSequencerUrl(v); }
-void PrivateMultisigPlugin::setProgramIdHex(const QString& v) { backend()->setProgramIdHex(v); }
-void PrivateMultisigPlugin::setWalletCliDir(const QString& v) { backend()->setWalletCliDir(v); }
+void PrivateMultisigPlugin::setWalletPath(QString v) { backend()->setWalletPath(v); }
+void PrivateMultisigPlugin::setSequencerUrl(QString v) { backend()->setSequencerUrl(v); }
+void PrivateMultisigPlugin::setProgramIdHex(QString v) { backend()->setProgramIdHex(v); }
+void PrivateMultisigPlugin::setWalletCliDir(QString v) { backend()->setWalletCliDir(v); }
 
-void PrivateMultisigPlugin::createMultisig(const QString& creatorId, const QString& configHash, const QString& memberRoot, quint32 m, quint32 n, const QString& multisigId, const QVariantList& membershipProgramId) {
+void PrivateMultisigPlugin::createMultisig(QString creatorId, QString configHash, QString memberRoot, quint32 m, quint32 n, QString multisigId, QVariantList membershipProgramId) {
 	backend()->createMultisig(creatorId, configHash, memberRoot, m, n, multisigId, membershipProgramId);
 }
-void PrivateMultisigPlugin::createProposal(const QString& proposerId, const QString& configHash, const QString& proposalSeed, const QString& proposalId, const QString& recipient, const QString& amount) {
+void PrivateMultisigPlugin::createProposal(QString proposerId, QString configHash, QString proposalSeed, QString proposalId, QString recipient, QString amount) {
 	backend()->createProposal(proposerId, configHash, proposalSeed, proposalId, recipient, amount);
 }
-void PrivateMultisigPlugin::approve(const QString& configHash, const QString& proposalSeed, const QString& memberRoot, const QString& claimedNullifier, const QVariantList& witness) {
+void PrivateMultisigPlugin::approve(QString configHash, QString proposalSeed, QString memberRoot, QString claimedNullifier, QVariantList witness) {
 	backend()->approve(configHash, proposalSeed, memberRoot, claimedNullifier, witness);
 }
-void PrivateMultisigPlugin::execute(const QString& configHash, const QString& proposalSeed) {
+void PrivateMultisigPlugin::execute(QString configHash, QString proposalSeed) {
 	backend()->execute(configHash, proposalSeed);
 }
 
-void PrivateMultisigPlugin::fetchConfig(const QString& configHash) { backend()->fetchConfig(configHash); }
-void PrivateMultisigPlugin::fetchProposal(const QString& proposalSeed) { backend()->fetchProposal(proposalSeed); }
+void PrivateMultisigPlugin::fetchConfig(QString configHash) { backend()->fetchConfig(configHash); }
+void PrivateMultisigPlugin::fetchProposal(QString proposalSeed) { backend()->fetchProposal(proposalSeed); }
 
-void        PrivateMultisigPlugin::checkConnection() { backend()->checkConnection(); }
-void        PrivateMultisigPlugin::listAccounts() { backend()->listAccounts(); }
-void        PrivateMultisigPlugin::createAccount(const QString& label) { backend()->createAccount(label); }
-void        PrivateMultisigPlugin::inspectAccount(const QString& accountId) { backend()->inspectAccount(accountId); }
-void        PrivateMultisigPlugin::decodeAccount(const QString& accountId) { backend()->decodeAccount(accountId); }
-QStringList PrivateMultisigPlugin::fieldHistory(const QString& key) const { return backend()->fieldHistory(key); }
-void        PrivateMultisigPlugin::saveHistory(const QString& key, const QString& value) { backend()->saveHistory(key, value); }
+void PrivateMultisigPlugin::checkConnection() { backend()->checkConnection(); }
+void PrivateMultisigPlugin::listAccounts() { backend()->listAccounts(); }
+void PrivateMultisigPlugin::createAccount(QString label) { backend()->createAccount(label); }
+void PrivateMultisigPlugin::inspectAccount(QString accountId) { backend()->inspectAccount(accountId); }
+void PrivateMultisigPlugin::decodeAccount(QString accountId) { backend()->decodeAccount(accountId); }
+void PrivateMultisigPlugin::saveHistory(QString key, QString value) { backend()->saveHistory(key, value); }

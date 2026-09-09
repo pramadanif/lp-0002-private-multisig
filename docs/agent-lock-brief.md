@@ -2,7 +2,7 @@
 
 Pin `0321d01ff4944474aab81cf7aca3896f0d2bbc2a`. Every line below was measured, not recalled.
 
-**SUBMISSION_STATUS = NOT READY** — L1 (the Basecamp module needs a replica factory), L2 (the public explorer has not indexed five transactions) and L11 (the video, human) open; L7 locked, with L3, L4, L5, L6, L8, L9, L10.
+**SUBMISSION_STATUS = NOT READY** — L2 (the public explorer has not indexed five transactions) and L11 (the video, human) open; L1 and L7 locked, with L3, L4, L5, L6, L8, L9, L10.
 
 ## One paragraph
 
@@ -28,7 +28,7 @@ unconfirmed. Nothing here is "almost": four gates are open.
 
 | Gate | State | Proof |
 |------|-------|-------|
-| **L1** Basecamp package | **NOT LOCKED** | `.lgx` 2632590 bytes, sha256 `c8056283a7f9c7b5…`. Installs in Basecamp 0.2.3 and opens from Applications → Blockchain, and every panel renders — but **inside Basecamp they are inert**: the host reaches a module's C++ through a replica factory plugin we do not yet ship (`LogosQmlBridge: no replica factory plugin registered`). A first attempt at one crashed Basecamp on startup and was withdrawn; three candidate causes were tested and disproved (see [tried-failed.md](../docs/tried-failed.md)). What is proven is the layer beneath: `check-basecamp-contract.sh` drives the plugin's own slots against the live testnet and decodes the deployed 2-of-3, in a harness of ours. Scope: `darwin-arm64` only |
+| **L1** Basecamp package | **LOCKED** | `.lgx` 2664623 bytes, sha256 `18d48436cb114ed481980629f92a172c8371a7beb64f54b983571465c0a6ae74`. Installs in Basecamp 0.2.3, opens from Applications → Blockchain, and its panels read the deployed multisig — Config shows the 2-of-3 and the membership ImageID, Proposal two nullifiers and `executed`, Accounts the wallet. Needed a replica factory plugin (`logos.view.replica_factory/1.0`) whose interface was reconstructed from the host binary; `check-basecamp-contract.sh` asserts the contract and the factory test publishes the plugin and acquires a replica through the shipped factory. Caveats, both stated: `darwin-arm64` only, and Basecamp must start with `QT_ENABLE_REGEXP_JIT=0` — [BUGS_FILED.md](BUGS_FILED.md) §8, the host's bug |
 | **L2** Explorer live | **NOT LOCKED** | Redeployed 2026-09-08. `check-explorer-links.sh` → exit 75: all seven transactions are on the chain, the explorer has not indexed them yet. Re-run before the PR |
 | **L3** verify-onchain | **LOCKED** | exit 0 against the live deployment: FULL M, INV-7 (payee holds 60 of 60 approved), treasury 40 exactly, 2 privacy-preserving transactions |
 | **L4** Full-M testnet lifecycle | **LOCKED** | create_multisig `007d9ff2…` · propose `aa14aa28…` · approve `a3eaeb3a…` · approve `2a283d3c…` · execute `d1a47fdd…`; treasury 100 → 40, payee 0 → 60. DEPLOYMENT.md carries all seven with full hashes and links |

@@ -26,12 +26,20 @@ extern "C" {
     char* private_multisig_decode_account(const char* args_json);
 }
 
+// Where settings live. The application name is overridable so a test that exercises the setters —
+// and they persist, that is their job — writes into its own scope instead of the operator's. The
+// pairing test overwrote a real sequencer URL with a probe value once.
+static QSettings pmsigSettings() {
+    return QSettings(QStringLiteral("logos-co"),
+                     qEnvironmentVariable("PMSIG_SETTINGS_APP", QStringLiteral("private_multisig")));
+}
+
 // ── Construction ──────────────────────────────────────────────────────────
 
 PrivateMultisigBackend::PrivateMultisigBackend(LogosAPI* /*api*/, QObject* parent)
     : QObject(parent)
 {
-    QSettings s("logos-co", "private_multisig");
+    QSettings s = pmsigSettings();
     m_walletPath   = s.value("walletPath",   qEnvironmentVariable("LEE_WALLET_HOME_DIR",  ".scaffold/wallet")).toString();
     m_sequencerUrl = s.value("sequencerUrl", qEnvironmentVariable("NSSA_SEQUENCER_URL",   "http://127.0.0.1:3040")).toString();
     m_programIdHex = s.value("programIdHex", qEnvironmentVariable("PRIVATE_MULTISIG_PROGRAM_ID")).toString();
@@ -87,7 +95,7 @@ void PrivateMultisigBackend::applyWalletCliDir() {
 void PrivateMultisigBackend::setWalletCliDir(const QString& v) {
     if (m_walletCliDir == v) return;
     m_walletCliDir = v;
-    QSettings("logos-co", "private_multisig").setValue("walletCliDir", v);
+    pmsigSettings().setValue("walletCliDir", v);
     applyWalletCliDir();
     emit walletCliDirChanged();
     if (!m_walletPath.isEmpty()) listAccounts();
@@ -96,7 +104,7 @@ void PrivateMultisigBackend::setWalletCliDir(const QString& v) {
 void PrivateMultisigBackend::setWalletPath(const QString& v) {
     if (m_walletPath == v) return;
     m_walletPath = v;
-    QSettings("logos-co", "private_multisig").setValue("walletPath", v);
+    pmsigSettings().setValue("walletPath", v);
     emit walletPathChanged();
     if (!v.isEmpty()) listAccounts();
 }
@@ -104,14 +112,14 @@ void PrivateMultisigBackend::setWalletPath(const QString& v) {
 void PrivateMultisigBackend::setSequencerUrl(const QString& v) {
     if (m_sequencerUrl == v) return;
     m_sequencerUrl = v;
-    QSettings("logos-co", "private_multisig").setValue("sequencerUrl", v);
+    pmsigSettings().setValue("sequencerUrl", v);
     emit sequencerUrlChanged();
 }
 
 void PrivateMultisigBackend::setProgramIdHex(const QString& v) {
     if (m_programIdHex == v) return;
     m_programIdHex = v;
-    QSettings("logos-co", "private_multisig").setValue("programIdHex", v);
+    pmsigSettings().setValue("programIdHex", v);
     emit programIdHexChanged();
 }
 
@@ -445,13 +453,13 @@ void PrivateMultisigBackend::decodeAccount(const QString& accountId) {
 // ── Field history ────────────────────────────────────────────────────────
 
 QStringList PrivateMultisigBackend::fieldHistory(const QString& key) const {
-    return QSettings("logos-co", "private_multisig")
+    return pmsigSettings()
                .value("history/" + key, QStringList{}).toStringList();
 }
 
 void PrivateMultisigBackend::saveHistory(const QString& key, const QString& value) {
     if (value.trimmed().isEmpty()) return;
-    QSettings s("logos-co", "private_multisig");
+    QSettings s = pmsigSettings();
     QStringList h = s.value("history/" + key, QStringList{}).toStringList();
     h.removeAll(value);
     h.prepend(value);

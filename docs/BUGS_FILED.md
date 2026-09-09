@@ -115,6 +115,85 @@ explanation wastes a maintainer's time. It will be filed only if it reproduces o
 
 ---
 
+## 8. Basecamp's QML sandbox JIT-compiles a regex it is not entitled to
+
+**Logos Basecamp 0.2.3, macOS 26.0.1, Apple Silicon.** Opening a `ui_qml` module whose C++ is
+reached through a replica factory kills the application:
+
+```
+Thread 14 Crashed:: QQmlThread
+0  libsystem_pthread.dylib  pthread_jit_write_protect_np + 520
+1  libpcre2-16.0.dylib      sljit_malloc_exec + 144
+2  libpcre2-16.0.dylib      pcre2_jit_compile_16 + 128
+3  QtCore                   QRegularExpressionPrivate::compilePattern()
+4  QtCore                   QRegularExpression::match(...)
+5  main_ui.dylib            RestrictedUrlInterceptor::qmldirDeclaresNativePlugin(QString) const
+6  main_ui.dylib            RestrictedUrlInterceptor::intercept(QUrl, QQmlAbstractUrlInterceptor::DataType)
+```
+
+`EXC_BREAKPOINT (SIGTRAP)`. The sandbox's url interceptor runs a `QRegularExpression` over each
+`qmldir` it intercepts; Qt JIT-compiles a pattern once it has been used enough times, and
+`pthread_jit_write_protect_np` traps because the process may not JIT:
+
+```
+$ codesign -d --entitlements - /Applications/LogosBasecamp.app/Contents/MacOS/LogosBasecamp.bin
+    com.apple.security.cs.disable-library-validation = true
+$ codesign -dvvv /Applications/LogosBasecamp.app
+    CodeDirectory ... flags=0x10000(runtime)
+```
+
+Hardened runtime, and the only entitlement is the one that lets third-party modules load. There is
+no `com.apple.security.cs.allow-jit` — so the JIT the application's own QML sandbox reaches for is
+not available to it.
+
+**Workaround** (needed to open this module at all): start Basecamp with Qt's regex JIT off.
+
+```bash
+launchctl setenv QT_ENABLE_REGEXP_JIT 0    # inherited by apps launched from Finder or the Dock
+```
+
+**Suggested fix:** add `com.apple.security.cs.allow-jit` to the app's entitlements, or set
+`QT_ENABLE_REGEXP_JIT=0` in the bundle's own launch environment.
+
+**Why it is easy to miss.** It needs a module whose QML tree causes enough interceptor calls to pass
+Qt's JIT threshold; Basecamp's bundled `logos_delivery_demo` is small enough to stay under it. And
+the crash names neither Basecamp's own code nor the module's — every frame is Qt or PCRE2.
+
+---
+
+## 9. Nothing documents the replica factory a `ui_qml` module must ship
+
+**Logos Basecamp 0.2.3.** A `ui_qml` module's QML runs in the main process while its plugin runs in
+a `ui-host` child. The QML reaches the plugin as `logos.module("<name>")`, and that call returns null
+unless a *second* plugin — `<name>_replica_factory.<ext>`, beside the first, declaring IID
+`logos.view.replica_factory/1.0` — is present to build the replica:
+
+```
+LogosQmlBridge: no replica factory plugin registered for "private_multisig"
+```
+
+Nothing in the manifest mentions it, no header for the interface ships with the application, and the
+generator (`spel-client-gen --target logos-module`) does not emit one. A module without it installs,
+opens, and renders every panel — and does nothing, because each binding raises
+`ReferenceError: backend is not defined` while the window draws perfectly.
+
+The other route is closed explicitly: `logos.callModule()` answers
+`{"error":"view modules must be called via logos.module()"}` for view modules.
+
+The interface had to be reconstructed from `package_manager_ui_replica_factory.dylib`'s vtable:
+
+```
+[offset-to-top][typeinfo][~dtor D1][~dtor D0][acquire(QRemoteObjectNode*)][replicaMetaObject() const]
+```
+
+Getting the destructor wrong is not a compile error — the host calls `acquire` at a fixed slot and
+lands on whatever is there, which for us was libc++abi's RTTI data, in Basecamp's own process.
+
+**Suggested fix:** ship the interface header, and have `spel-client-gen --target logos-module`
+generate the factory alongside the plugin. Both would have made this a non-event.
+
+---
+
 ## Not bugs — our own mistakes, kept for honesty
 
 These cost real time and were **ours**, not upstream's. They are in `docs/tried-failed.md` in full:
