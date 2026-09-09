@@ -45,10 +45,26 @@ trap restore EXIT
 
 drills=0; missed=0
 
-# probe <id> <description> — the gate must report FAIL while the violation is planted
+# The baseline every probe is measured against. A gate that is already failing would report "fires"
+# for any planted violation, including one that does nothing — which is exactly what happened when
+# this script put RISC0_DEV_MODE on the submission path merely by containing the string. So: read
+# the gates once on a clean tree first, and refuse to test any that are not passing.
+echo "  reading the clean baseline first — a gate already failing cannot be shown to fire"
+BASELINE=$(./scripts/preflight-submission.sh 2>&1)
+
+# probe <id> <description> — the gate must PASS clean and FAIL while the violation is planted
 probe() {
-  local id="$1" what="$2" line
+  local id="$1" what="$2" line base
   drills=$((drills+1))
+  base=$(printf '%s\n' "$BASELINE" | grep -E "^(PASS|FAIL|PENDING) +$id " | head -1)
+  if [[ "$base" != PASS* ]]; then
+    missed=$((missed+1))
+    printf '  UNTESTABLE %-6s %s\n' "$id" "$what"
+    printf '             it is not passing on a clean tree, so failing proves nothing: %s\n' \
+           "${base:-<no line for $id at all>}"
+    restore
+    return
+  fi
   line=$(./scripts/preflight-submission.sh 2>&1 | grep -E "^(PASS|FAIL|PENDING) +$id " | head -1)
   if [[ "$line" == FAIL* ]]; then
     printf '  fires   %-6s %s\n' "$id" "$what"
@@ -66,8 +82,10 @@ echo
 printf '\nif ! command -v definitely_not_a_real_tool >/dev/null; then\n  echo skipping\n  exit 0\nfi\n' >> demo.sh
 probe PF-03 "a missing-tool branch that still exits 0"
 
-printf '\nRISC0_DEV_MODE=1\n' >> scripts/deploy-testnet.sh
-probe PF-04 "RISC0_DEV_MODE=1 on the submission path"
+# Split, so this file does not itself put the literal on the submission path. It did, and PF-04
+# started failing on the drill that tests PF-04. Same shape as the needle below.
+printf '\n%s\n' "RISC0_DEV_MODE=""1" >> scripts/deploy-testnet.sh
+probe PF-04 "dev mode forced on, on the submission path"
 
 # Three shapes of the same secret. The fake keys below are literals, never a real nsk.
 printf '\n  witness = 0x%s\n' "$(printf '1%.0s' {1..64})" >> docs/limitations.md
