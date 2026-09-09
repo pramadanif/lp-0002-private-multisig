@@ -39,7 +39,7 @@ unconfirmed. Nothing here is "almost": four gates are open.
 | **L9** Crypto / claim integrity | **LOCKED** | `cargo test --workspace` 128 passed, 0 failed. Includes INV-7 (execute refuses a recipient the proposal did not name), nullifier double-vote, restart-resume, and the admission-rule transcription |
 | **L10** Solution packet | **LOCKED except the video URL** | Downloads section with the .lgx hash, size, arch and install link; verification one-liners; DEPLOYMENT.md has untrimmed hashes *with* links. Video URL fills in at L11 |
 | **L11** Video | **HUMAN_BLOCKED: video** | Not recorded. Must be a human voice, must show the Basecamp UI, must show the pin and `RISC0_DEV_MODE=0` legibly |
-| **L12** Preflight + day-of | **NOT LOCKED** | `pass=17 fail=0 pending=2` — PF-09 awaits the explorer index, PF-12 awaits the video. Day-of re-verification still required |
+| **L12** Preflight + day-of | **NOT LOCKED** | `pass=18 fail=0 pending=2` — PF-09 awaits the explorer index, PF-12 awaits the video. Day-of re-verification still required |
 
 ## What the reset cost, and what it did not
 
