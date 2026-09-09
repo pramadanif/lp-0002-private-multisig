@@ -8,7 +8,7 @@ was done. Measured 2026-09-09.
 
 | | |
 |-|-|
-| Pin at time of writing | `5f28b47c31e4905efc257b7978d24c63633648f9` (moves until the freeze) |
+| Pin at time of writing | `d8a801bd125112dee452ad2b9cf4210088be8626` (moves until the freeze) |
 | `.lgx` | 2,652,219 bytes, sha256 `c2c4310565c059fbcffee19613ade77d9080dbd83f5b906a35a66f3109140f06` |
 | `verify-onchain.sh` | **exit 0** — 2-of-3, full M, INV-7 satisfied, `VERIFIED from public chain data alone` |
 | `check-explorer-links.sh` | **exit 75** — 6 of 11 resolve; the five lifecycle transactions are on chain but not yet indexed |

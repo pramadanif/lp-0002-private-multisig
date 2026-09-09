@@ -50,7 +50,7 @@ camera reading chain state. The URL will be placed here and in the Repository li
 ## Repository
 
 - **Repo:** <https://github.com/pramadanif/lp-0002-private-multisig>
-- **Commit / pin:** `5f28b47c31e4905efc257b7978d24c63633648f9` measured 2026-09-09. The pin may move
+- **Commit / pin:** `d8a801bd125112dee452ad2b9cf4210088be8626` measured 2026-09-09. The pin may move
   until the submission is frozen; the commit named in the PR is the one that counts.
 - **Licence:** MIT OR Apache-2.0
 - **Narrated demo video:** **TBD** — human recording pending

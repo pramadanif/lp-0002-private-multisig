@@ -299,9 +299,27 @@ else
   ok "PF-16" "no tracked file contains an approval witness"
 fi
 
+# PF-17 — the commit SOLUTION_DRAFT names must be one this repository actually has.
+# A pin nobody can check out is worse than no pin: a judge who tries it gets "unknown revision" and
+# has no way to tell a typo from a force-push. Lagging HEAD is fine and expected while work
+# continues — it is reported, not failed, and PF-15 tells the operator to set it before the PR.
+DRAFT_PIN=$(grep -Eo '\*\*Commit / pin:\*\* `[0-9a-f]{7,40}`' docs/SOLUTION_DRAFT.md 2>/dev/null \
+            | grep -Eo '[0-9a-f]{7,40}' | head -1)
+HEAD_SHA=$(git rev-parse HEAD 2>/dev/null || echo 'unknown')
+if [[ -z "$DRAFT_PIN" ]]; then
+  bad "PF-17" "docs/SOLUTION_DRAFT.md names no commit pin"
+elif ! git cat-file -e "${DRAFT_PIN}^{commit}" 2>/dev/null; then
+  bad "PF-17" "SOLUTION_DRAFT pins $DRAFT_PIN, which is not a commit in this repository"
+elif [[ "$DRAFT_PIN" == "$HEAD_SHA"* ]]; then
+  ok "PF-17" "SOLUTION_DRAFT pins HEAD ($DRAFT_PIN)"
+else
+  BEHIND=$(git rev-list --count "$DRAFT_PIN..HEAD" 2>/dev/null || echo '?')
+  ok "PF-17" "SOLUTION_DRAFT pins $DRAFT_PIN, a real commit $BEHIND behind HEAD — set it to the PR commit before opening"
+fi
+
 # PF-15 — print the pin and remind about day-of re-verification
-PIN=$(git rev-parse HEAD 2>/dev/null || echo 'unknown')
-ok "PF-15" "pin commit $PIN — RE-RUN verify-onchain.sh AND check-explorer-links.sh on the day the PR is opened (testnet wipes)"
+PIN=$HEAD_SHA
+ok "PF-15" "pin commit $PIN — before opening the PR: set SOLUTION_DRAFT's pin to this, and RE-RUN verify-onchain.sh AND check-explorer-links.sh (testnet wipes)"
 
 echo "------------------------------------------------------------------"
 printf 'pass=%d fail=%d pending=%d\n' "$pass" "$fail" "$pending"
