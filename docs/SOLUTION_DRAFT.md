@@ -3,8 +3,7 @@
 **Submitted by:** pramadanif
 
 > This file is the draft of `solutions/LP-0002.md`. It is written in the prize repository's shape and
-> uses absolute links, so it can be copied there unchanged. Two `TBD` slots wait on the narrated
-> video; nothing else is a placeholder.
+> uses absolute links, so it can be copied there unchanged. Nothing in it is a placeholder.
 
 ## Summary
 
@@ -34,27 +33,33 @@ The precise on-chain claim, stated so a reviewer can check it rather than take i
   PDA seed. Lowering M, substituting the member set, or naming a permissive verifier does not weaken
   the multisig — it names one that does not exist.
 
-**Outstanding, and not glossed:** the narrated video is not recorded, and the public explorer has
-indexed the two program deployments but not yet the five lifecycle transactions. See
-[What is not done](#what-is-not-done).
+**Outstanding, and not glossed:** the public explorer has indexed the two program deployments but
+not yet the five lifecycle transactions. See [What is not done](#what-is-not-done).
 
 ## Demo Video
 
-**Not recorded yet — TBD.**
+**<https://youtu.be/7gRweVxWEL4>**
 
-The shot list and the required narration are in
-[`docs/video-transcript.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/video-transcript.md):
-human voice throughout, the CLI lifecycle with `RISC0_DEV_MODE=0` legible, and the Basecamp module on
-camera reading chain state. The URL will be placed here and in the Repository list below.
+Narrated by the builder, not synthesised. Jump straight to the evidence:
+
+| | |
+|-|-|
+| `./demo.sh` starts — `RISC0_DEV_MODE=0` banner, real sequencer | [https://youtu.be/7gRweVxWEL4?t=100](https://youtu.be/7gRweVxWEL4?t=100) |
+| the lifecycle completes — two anonymous approvals, execute at full M | [https://youtu.be/7gRweVxWEL4?t=194](https://youtu.be/7gRweVxWEL4?t=194) |
+| the Basecamp module, reading the deployed multisig from chain | [https://youtu.be/7gRweVxWEL4?t=246](https://youtu.be/7gRweVxWEL4?t=246) |
+
+The shot list and narration are in
+[`docs/video-transcript.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/video-transcript.md).
 
 ## Repository
 
 - **Repo:** <https://github.com/pramadanif/lp-0002-private-multisig>
-- **Commit / pin:** `d8a801bd125112dee452ad2b9cf4210088be8626` measured 2026-09-09. The pin may move
-  until the submission is frozen; the commit named in the PR is the one that counts.
+- **Commit / pin:** `138c683bb4b57f8e600a6ff3e43bb95d036a94b5` — **this is the commit shown on camera**. `demo.sh` and
+  `verify-onchain.sh` both print the short hash `138c683` in their banners, so the video and this
+  file name the same commit. Later commits on `main` are documentation only; `git checkout 138c683`
+  reproduces exactly what the recording shows.
 - **Licence:** MIT OR Apache-2.0
-- **Narrated demo video:** **TBD** — human recording pending
-  ([shot list](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/video-transcript.md))
+- **Narrated demo video:** <https://youtu.be/7gRweVxWEL4>
 - **Per-criterion map:**
   [`docs/criteria-checklist.md`](https://github.com/pramadanif/lp-0002-private-multisig/blob/main/docs/criteria-checklist.md)
 - **Deployment evidence:**
@@ -264,8 +269,10 @@ which carries the full evidence for each.
 - [x] **P-S3** CI green on the default branch
 - [x] **P-S4** README documents E2E usage: deploy steps, addresses, CLI **and** Basecamp
 - [x] **P-S5** Reproducible `./demo.sh` against a real local sequencer with `RISC0_DEV_MODE=0`
-- [ ] **P-S6** Narrated video showing proof generation and confirming `RISC0_DEV_MODE=0` —
-      **not recorded**; script ready, URL pending
+- [x] **P-S6** Narrated video showing proof generation and confirming `RISC0_DEV_MODE=0` —
+      <https://youtu.be/7gRweVxWEL4>, human-narrated; proof generation at
+      [t=100](https://youtu.be/7gRweVxWEL4?t=100), the completed lifecycle at [t=194](https://youtu.be/7gRweVxWEL4?t=194), and the Basecamp module
+      reading chain state at [t=246](https://youtu.be/7gRweVxWEL4?t=246)
 
 ## FURPS Self-Assessment
 
@@ -334,7 +341,6 @@ evidence anywhere.
 Listed first-class, because the difference between built and demonstrated is what this prize's gates
 test.
 
-- **No narrated video.** P-S6 unmet. The script is written; the recording is a human gate.
 - **The public explorer has not indexed all of the evidence.** Every transaction answers over
   JSON-RPC and `verify-onchain.sh` reads them all; the explorer renders the two program deployments
   but not yet the five lifecycle transactions. `check-explorer-links.sh` says which, and exits 75.

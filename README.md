@@ -9,11 +9,16 @@ Repository: <https://github.com/pramadanif/lp-0002-private-multisig>
 
 ## Narrated demo video
 
-**Not recorded yet.** Shot list and required narration (human voice, CLI + Basecamp, `RISC0_DEV_MODE=0`):
-[`docs/video-transcript.md`](docs/video-transcript.md).
+**<https://youtu.be/7gRweVxWEL4>** — narrated by the builder.
 
-When published, the URL will be linked here and in the solution file (prize / eng require it in the
-solution packet, not only the PR description).
+| | |
+|-|-|
+| `./demo.sh` starts, `RISC0_DEV_MODE=0` against a real sequencer | [t=100](https://youtu.be/7gRweVxWEL4?t=100) |
+| lifecycle complete — two anonymous approvals, execute at full M | [t=194](https://youtu.be/7gRweVxWEL4?t=194) |
+| the Basecamp module reading the deployed multisig | [t=246](https://youtu.be/7gRweVxWEL4?t=246) |
+
+Recorded at commit `138c683`, which `demo.sh` and `verify-onchain.sh` print in their own banners.
+Shot list and narration: [`docs/video-transcript.md`](docs/video-transcript.md).
 
 ## Status
 
@@ -23,7 +28,7 @@ solution packet, not only the PR description).
 | Local / CI demo | **Done** — `./demo.sh` against a standalone LEZ sequencer; CI e2e with real proofs, green twice ([run 34302452494](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34302452494), [run 34275830322](https://github.com/pramadanif/lp-0002-private-multisig/actions/runs/34275830322)). |
 | Basecamp `.lgx` | **Done (darwin-arm64)** — installs as `ui_qml` under Applications → Blockchain. See [`docs/basecamp-load.md`](docs/basecamp-load.md). Approve stays in CLI/SDK (module does not submit PPE approvals). |
 | Explorer index | **Pending** — txs are on the sequencer; some explorer pages still WAIT. Re-run `./scripts/check-explorer-links.sh` before opening a solution PR. |
-| Narrated video | **Outstanding** (human gate) — P-S6. |
+| Narrated video | **Done** — [https://youtu.be/7gRweVxWEL4](https://youtu.be/7gRweVxWEL4), recorded at `138c683`. |
 
 Per-criterion map: [`docs/criteria-checklist.md`](docs/criteria-checklist.md).  
 Limitations: [`docs/limitations.md`](docs/limitations.md).

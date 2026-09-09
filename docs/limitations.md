@@ -228,11 +228,11 @@ and is not any more; the entries are kept rather than deleted so the record show
 
 What is genuinely still open:
 
-- **The narrated video.** Not recorded. It needs a human voice — an AI narration is one of the
-  stated reasons the previous submission for this prize was rejected.
-- **The public explorer's index.** All eleven evidence URLs answer over JSON-RPC, and the explorer
-  renders six of them; the five lifecycle transactions are on chain but not yet indexed.
-  `./scripts/check-explorer-links.sh` reports which, and exits 75 rather than passing quietly.
+- **The public explorer's index.** Every evidence URL answers over JSON-RPC. Of the 27 the checker
+  reads, 22 resolve in a browser; of the seven lifecycle transactions the explorer has indexed the
+  two program deployments and not the other five. `./scripts/check-explorer-links.sh` reports which,
+  and exits 75 rather than passing quietly. Measured 2026-09-09 — re-run it on the day the PR opens,
+  because the number moves on its own as the indexer catches up.
 - **One platform variant.** The Basecamp package carries `darwin-arm64` only — the machine it was
   built on. Nothing in the module is macOS-specific; no second machine was available to build and
   test the others, and shipping an untested variant is worse than shipping none.

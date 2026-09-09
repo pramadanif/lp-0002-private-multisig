@@ -1,8 +1,9 @@
 # Demo video — shot list and narration
 
-**Status: NOT RECORDED.** This is the script, written so the session is reading and running rather
-than improvising. Replace the "Say" lines with the real transcript once the video exists, and put the
-URL in `solutions/LP-0002.md` — not only in the PR description.
+**Status: RECORDED — <https://youtu.be/7gRweVxWEL4>**, at commit `138c683`.
+
+This is the shot list and narration it was made from, kept as the record of what the recording set
+out to show. The URL belongs in `solutions/LP-0002.md`, not only in the PR description.
 
 **Three things closed a rival submission for this exact prize on 2026-09-07, in the reviewer's own
 words. They are requirements, not preferences:**

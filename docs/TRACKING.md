@@ -7,13 +7,14 @@
 - Current phase: **H (submission packet)**. Phase E closed 2026-09-09: the unattended run it was
   waiting on completed twice on the same day — CI run 34275830322 (2 h 54 m, two 75-minute proofs at
   `RISC0_DEV_MODE=0`) and a laptop run (`evidence/e2e-local-2026-09-09.md`).
-- Last green SC: Phase E complete (SC-E.1 and SC-E.4 met); Phase F complete (the Basecamp module
-  installs, opens and reads the chain). Outstanding: the narrated video, and the explorer index.
+- Last green SC: Phase E and F complete; Phase H complete — the video is recorded and every
+  criterion is met. The only thing still outstanding is not a criterion: the public explorer has
+  not finished indexing five of the lifecycle transactions.
 - Blockers: the testnet reset on 2026-09-08 is **handled** — redeployed the same day, and
   `verify-onchain.sh` re-read the whole lifecycle from public data on 2026-09-09 (exit 0).
   Outstanding: the public explorer has indexed the two program deployments but not yet the five
   lifecycle transactions (`check-explorer-links.sh` exits 75). **The Basecamp module** is
-  built, packaged, installed in Basecamp 0.2.3 and wired to the chain (see `scripts/check-basecamp-contract.sh`); only the `darwin-arm64` variant ships. **The video** is not recorded.
+  built, packaged, installed in Basecamp 0.2.3 and wired to the chain (see `scripts/check-basecamp-contract.sh`); only the `darwin-arm64` variant ships. **The video** is recorded and published — <https://youtu.be/7gRweVxWEL4>, at commit `138c683`.
   Everything else is locked with command evidence — see
   [criteria-checklist.md](criteria-checklist.md), which carries the evidence per criterion.
   (Historic: the `e2e-sequencer` job was wired and had not completed; it went green on
@@ -84,5 +85,5 @@ them still read "in progress" for work that had finished. They are kept for hist
 | E  | ✅ complete — closed 2026-09-09 when the unattended run completed twice in one day | `docs/_archive/phase-E-status.md` | `7026ecf` |
 | F  | ✅ complete — the Basecamp module installs, opens and reads the chain | `docs/_archive/phase-F-status.md` | `de77b2e` |
 | G  | ✅ complete — deployed to the public testnet, `verify-onchain.sh` exit 0 | `docs/DEPLOYMENT.md` | — |
-| H  | ◐ in progress — the packet is written; the narrated video is not recorded | `docs/SOLUTION_DRAFT.md` | — |
+| H  | ✅ complete — packet written, video recorded and linked, all 21 criteria met | `docs/SOLUTION_DRAFT.md` | — |
 | I  | not started — the operator opens the prize PR, never the agent | — | — |
