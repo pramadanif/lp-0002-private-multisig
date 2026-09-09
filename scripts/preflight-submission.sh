@@ -288,11 +288,17 @@ fi
 # tracked file anyway. docs/video-transcript.md asks for a run log to be published beside the
 # recording, so the path from "helpful evidence" to "a spending key in the submission repository" is
 # one `git add -f` long.
-# Two shapes, because the CLI prints the same bytes twice: the parsed argument, and the serialised
-# instruction data as a list of u32 words. A log pasted in without the first would still carry the
-# key in the second.
+# Three shapes. The CLI prints the same bytes twice — the parsed argument (`witness = 0x…`, and
+# again as `witness: 0x…` inside the instruction dump) and the serialised instruction data as a list
+# of u32 words — so a log pasted in without the first still carries the key in the second.
+# The third is `nsk` written by hand. A fire drill planted `--witness {"nsk":"<64 hex>"}` in a
+# tracked document and this gate passed it: the pattern required a `0x` the CLI supplies and a human
+# retyping the argument does not. The gate stays keyed to the words `witness` and `nsk` rather than
+# matching bare 64-hex, because bare 64-hex is also every config hash, proposal id, transaction hash
+# and ImageID this repository publishes on purpose — a rule that fires on those would be turned off
+# within a day.
 witness_leaks=$(git ls-files -z 2>/dev/null \
-  | xargs -0 grep -lE 'witness[[:space:]]*[=:][[:space:]]*0x[0-9a-fA-F]{32,}|^[[:space:]]*\[[0-9a-f]{8}, [0-9a-f]{8}, [0-9a-f]{8},' 2>/dev/null || true)
+  | xargs -0 grep -lE 'witness[[:space:]]*[=:][[:space:]]*"?(0x)?[0-9a-fA-F]{32,}|["'"'"']?nsk["'"'"']?[[:space:]]*[=:][[:space:]]*"?(0x)?[0-9a-fA-F]{32,}|^[[:space:]]*\[[0-9a-f]{8}, [0-9a-f]{8}, [0-9a-f]{8},' 2>/dev/null || true)
 if [[ -n "$witness_leaks" ]]; then
   bad "PF-16" "a tracked file contains an approval witness — that is a spending key: $witness_leaks"
 else

@@ -104,8 +104,11 @@ redact_witness() {
   # `-i ''` works on macOS and makes GNU sed try to open a file named "". This runs on both — the
   # e2e job is Linux — and a failure here must never be shrugged off, because what it leaves behind
   # is a spending key.
+  # (0x)? and the nsk form as well as the CLI's own `witness = 0x…`: the redactor and preflight
+  # PF-16 must recognise the same shapes, or a log this passes is a log that gate then fails.
   sed -E \
-    -e "s/(witness[[:space:]]*[=:][[:space:]]*)0x[0-9a-fA-F]+/\1$marker/g" \
+    -e "s/(witness[[:space:]]*[=:][[:space:]]*\"?)(0x)?[0-9a-fA-F]{32,}/\1$marker/g" \
+    -e "s/(\"?nsk\"?[[:space:]]*[=:][[:space:]]*\"?)(0x)?[0-9a-fA-F]{32,}/\1$marker/g" \
     -e "s/^([[:space:]]*Serialized instruction data.*)$/\1 $marker/" \
     -e "s/^[[:space:]]*\[[0-9a-f]{8},.*$/    $marker/" \
     "$f" > "$f.redacted" || die "could not redact $f — refusing to leave a spending key in a log"
